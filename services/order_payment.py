@@ -1,7 +1,7 @@
 """Thanh toán QR, hết hạn đơn và webhook."""
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from database.db import get_db, query_one
 
@@ -11,9 +11,13 @@ VIETQR_BANK_CODE = os.getenv("VIETQR_BANK_CODE", "MB")
 VIETQR_ACCOUNT_NO = os.getenv("VIETQR_ACCOUNT_NO", "00931222")
 VIETQR_ACCOUNT_NAME = os.getenv("VIETQR_ACCOUNT_NAME", "HA MINH TRI")
 
+# Múi giờ Việt Nam (GMT+7)
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
 
 def payment_deadline_from_now():
-    return datetime.now() + timedelta(minutes=PAYMENT_DEADLINE_MINUTES)
+    # Sử dụng datetime.now(VIETNAM_TZ) để có đúng múi giờ Việt Nam
+    return datetime.now(VIETNAM_TZ) + timedelta(minutes=PAYMENT_DEADLINE_MINUTES)
 
 
 def new_guest_access_token():
@@ -85,7 +89,7 @@ def cancel_pending_order(conn, order_id, old_status, note="Hết hạn thanh to�
 
 def cancel_expired_pending_orders():
     """Hủy các đơn pending_payment quá hạn. Trả về số đơn đã hủy."""
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now(VIETNAM_TZ).strftime("%Y-%m-%d %H:%M:%S")
     conn = get_db()
     try:
         rows = conn.execute(
@@ -150,7 +154,14 @@ def order_payment_payload(order, items):
     expires_iso = None
     if expires:
         if isinstance(expires, str):
-            expires_iso = expires.replace(" ", "T")
+            # Chuyển đổi string datetime sang ISO format với timezone
+            try:
+                dt = datetime.strptime(expires, "%Y-%m-%d %H:%M:%S")
+                # Gán timezone Việt Nam
+                dt = dt.replace(tzinfo=VIETNAM_TZ)
+                expires_iso = dt.isoformat()
+            except ValueError:
+                expires_iso = expires.replace(" ", "T")
         else:
             expires_iso = expires.isoformat()
     return {

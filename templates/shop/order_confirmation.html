@@ -99,7 +99,7 @@
 (function () {
   const orderId = {{ order.MaDonHang }};
   const guestToken = {{ (guest_token or '')|tojson }};
-  const expiresAt = {{ (order.HanThanhToan or '')|tojson }};
+  const expiresAt = {{ (expires_at or '')|tojson }};
   const isPending = {{ (order.TrangThai == 'pending_payment')|tojson }};
 
   if (typeof PendingOrders !== "undefined" && isPending) {

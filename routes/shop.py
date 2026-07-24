@@ -611,8 +611,19 @@ def order_detail(order_id):
     
     # Tạo QR URL nếu đơn đang chờ thanh toán
     qr_url = None
+    expires_at = None
     if order["TrangThai"] == "pending_payment" and order["PhuongThucThanhToan"] == "chuyen_khoan":
         qr_url = build_vietqr_url(order["MaDonHang"], order["TongTien"])
+        # Chuyển expires_at sang ISO format với timezone
+        if order.get("HanThanhToan"):
+            from datetime import datetime, timezone, timedelta
+            try:
+                dt = datetime.strptime(order["HanThanhToan"], "%Y-%m-%d %H:%M:%S")
+                vn_tz = timezone(timedelta(hours=7))
+                dt = dt.replace(tzinfo=vn_tz)
+                expires_at = dt.isoformat()
+            except ValueError:
+                expires_at = order["HanThanhToan"].replace(" ", "T")
 
     return render_template(
         "shop/order_detail.html",
@@ -623,6 +634,7 @@ def order_detail(order_id):
         order_status=ORDER_STATUS,
         format_currency=format_currency,
         qr_url=qr_url,
+        expires_at=expires_at,
     )
 
 
@@ -653,8 +665,19 @@ def order_confirmation(order_id):
     )
 
     qr_url = None
+    expires_at = None
     if order["PhuongThucThanhToan"] == "chuyen_khoan" and order["TrangThai"] == "pending_payment":
         qr_url = build_vietqr_url(order_id, order["TongTien"])
+        # Chuyển expires_at sang ISO format với timezone
+        if order.get("HanThanhToan"):
+            from datetime import datetime, timezone, timedelta
+            try:
+                dt = datetime.strptime(order["HanThanhToan"], "%Y-%m-%d %H:%M:%S")
+                vn_tz = timezone(timedelta(hours=7))
+                dt = dt.replace(tzinfo=vn_tz)
+                expires_at = dt.isoformat()
+            except ValueError:
+                expires_at = order["HanThanhToan"].replace(" ", "T")
 
     return render_template(
         "shop/order_confirmation.html",
@@ -666,6 +689,7 @@ def order_confirmation(order_id):
         format_currency=format_currency,
         payment_methods=PAYMENT_METHODS,
         order_status=ORDER_STATUS,
+        expires_at=expires_at,
     )
 
 

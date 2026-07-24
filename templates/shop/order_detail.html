@@ -137,7 +137,7 @@ function copyToClipboard(text) {
 }
 
 const orderId = {{ order.MaDonHang }};
-const expiresAt = {{ (order.HanThanhToan or '')|tojson }};
+const expiresAt = {{ (expires_at or '')|tojson }};
 const isPending = {{ 'true' if order.TrangThai == 'pending_payment' else 'false' }};
 
 if (isPending && expiresAt) {
@@ -149,8 +149,9 @@ if (isPending && expiresAt) {
   
   // Countdown timer
   const countdownInterval = setInterval(function() {
-    const end = new Date(expiresAt.includes("T") ? expiresAt : expiresAt.replace(" ", "T"));
-    const diff = Math.max(0, Math.floor((end - Date.now()) / 1000));
+    const end = new Date(expiresAt);
+    const now = new Date();
+    const diff = Math.max(0, Math.floor((end - now) / 1000));
     const m = Math.floor(diff / 60);
     const s = diff % 60;
     
