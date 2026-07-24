@@ -593,6 +593,9 @@ def order_detail(order_id):
     if not order:
         flash("Không tìm thấy đơn hàng.", "danger")
         return redirect(url_for("shop.my_orders"))
+    
+    # Chuyển đổi Row sang dict để sử dụng .get()
+    order = dict(order)
 
     items = query_all(
         """SELECT ct.*, sp.TenSanPham, sp.Slug FROM ChiTietDonHang ct
@@ -656,6 +659,9 @@ def order_confirmation(order_id):
         if user_id:
             return redirect(url_for("shop.my_orders"))
         return redirect(url_for("shop.index"))
+    
+    # Chuyển đổi Row sang dict để sử dụng .get()
+    order = dict(order)
 
     items = query_all(
         """SELECT ct.*, sp.TenSanPham FROM ChiTietDonHang ct
