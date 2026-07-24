@@ -137,13 +137,16 @@ Hoặc sử dụng Postman/Thunder Client:
 
 **Cách 3: Tích hợp Webhook thật (Production)**
 Để hệ thống tự động nhận biết khi khách chuyển khoản thật, cần tích hợp với:
+- **SePay**: Dịch vụ theo dõi biến động số dư ngân hàng (Đã tích hợp sẵn)
 - **PayOS**: Cổng thanh toán Việt Nam với webhook
-- **SePay**: Dịch vụ theo dõi biến động số dư ngân hàng
 - **VietQR Webhook**: Webhook từ VietQR
 
 Cấu hình trong `.env`:
 ```env
-PAYMENT_WEBHOOK_SECRET=your_webhook_secret
+SEPAY_MERCHANT_ID=SP-LIVE-THA8BB58
+SEPAY_SECRET_KEY=spsk_live_bxCWHJK8CMa17axvMbPWk3fmJKv66EXq
+SEPAY_WEBHOOK_SECRET=your_webhook_secret_here
+PAYMENT_WEBHOOK_SECRET=your_webhook_secret_here
 ```
 
 ### Luồng Thanh Toán QR

@@ -8,7 +8,8 @@ from datetime import datetime
 from database.db import query_one, execute
 from services.order_payment import complete_order_payment, parse_order_id_from_transfer_content
 
-SEPAY_API_KEY = os.getenv("SEPAY_API_KEY")
+SEPAY_MERCHANT_ID = os.getenv("SEPAY_MERCHANT_ID")
+SEPAY_SECRET_KEY = os.getenv("SEPAY_SECRET_KEY")
 SEPAY_WEBHOOK_SECRET = os.getenv("SEPAY_WEBHOOK_SECRET")
 
 
@@ -84,17 +85,18 @@ def process_sepay_webhook(data):
 
 def get_sepay_transactions(limit=10):
     """Lấy danh sách giao dịch gần đây từ SePay API"""
-    if not SEPAY_API_KEY:
+    if not SEPAY_MERCHANT_ID or not SEPAY_SECRET_KEY:
         return []
     
     try:
         url = "https://my.sepay.vn/userapi/transactions/list"
         headers = {
-            "Authorization": f"Bearer {SEPAY_API_KEY}",
+            "Authorization": f"Bearer {SEPAY_SECRET_KEY}",
             "Content-Type": "application/json"
         }
         params = {
-            "limit": limit
+            "limit": limit,
+            "merchant_id": SEPAY_MERCHANT_ID
         }
         
         response = requests.get(url, headers=headers, params=params, timeout=10)
@@ -102,6 +104,7 @@ def get_sepay_transactions(limit=10):
         if response.status_code == 200:
             return response.json().get("transactions", [])
         else:
+            print(f"SePay API Error: {response.status_code} - {response.text}")
             return []
             
     except Exception as e:

@@ -697,12 +697,22 @@ def api_pending_orders():
         remaining_seconds = (deadline - datetime.now()).total_seconds()
         remaining_minutes = max(0, int(remaining_seconds / 60))
         
+        # Chuyển đổi Row thành dict
+        items_dict = []
+        for item in items:
+            items_dict.append({
+                "TenSanPham": item["TenSanPham"],
+                "SoLuong": item["SoLuong"],
+                "DonGia": item["DonGia"],
+                "ThanhTien": item["ThanhTien"]
+            })
+        
         result.append({
             "order_id": order["MaDonHang"],
             "total": order["TongTien"],
             "deadline": order["HanThanhToan"],
             "remaining_minutes": remaining_minutes,
-            "items": items,
+            "items": items_dict,
         })
     
     return jsonify({"pending_orders": result})
