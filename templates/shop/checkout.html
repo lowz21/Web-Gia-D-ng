@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Đặt hàng{% endblock %}
+{% block content %}
+<div class="container" style="max-width:700px;padding:2rem 1rem;">
+  <h1 class="page-title">Xác nhận đặt hàng</h1>
+  <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+    <h3>Sản phẩm</h3>
+    {% for item in items %}
+    {% set price, _ = get_effective_price(item) %}
+    <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #e2e8f0;">
+      <span>{{ item.TenSanPham }} x {{ item.SoLuong }}</span>
+      <span>{{ format_currency(price * item.SoLuong) }}</span>
+    </div>
+    {% endfor %}
+    <div style="display:flex;justify-content:space-between;padding-top:1rem;font-weight:800;font-size:1.1rem;">
+      <span>Tổng cộng</span><span class="price">{{ format_currency(total) }}</span>
+    </div>
+  </div>
+  <form method="post" class="card" style="padding:1.5rem;">
+    <div class="form-group">
+      <label>Địa chỉ giao hàng *</label>
+      <textarea class="form-control" name="address" required placeholder="Nhập địa chỉ giao hàng đầy đủ">{{ user.SoDienThoai and '' or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Phương thức thanh toán</label>
+      {% for key, label in payment_methods.items() %}
+      <label style="display:block;font-weight:400;margin:.3rem 0;">
+        <input type="radio" name="payment" value="{{ key }}" {% if key == 'COD' %}checked{% endif %}> {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-accent" style="width:100%;">Xác nhận đặt hàng</button>
+  </form>
+</div>
+{% endblock %}

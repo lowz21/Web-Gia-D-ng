@@ -1,0 +1,17 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">Thêm khuyến mãi</h1>
+<form method="post" class="card" style="padding:1.5rem;max-width:500px;">
+  <div class="form-group"><label>Tên khuyến mãi</label><input class="form-control" name="name" required></div>
+  <div class="form-group"><label>Phần trăm giảm (%)</label><input class="form-control" type="number" name="percent" min="1" max="100" required></div>
+  <div class="form-group"><label>Từ ngày</label><input class="form-control" type="date" name="start_date" required></div>
+  <div class="form-group"><label>Đến ngày</label><input class="form-control" type="date" name="end_date" required></div>
+  <div class="form-group"><label>Sản phẩm (để trống = toàn sàn)</label>
+    <select class="form-control" name="product_id">
+      <option value="">Toàn sàn</option>
+      {% for p in products %}<option value="{{ p.MaSanPham }}">{{ p.TenSanPham }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Lưu</button>
+</form>
+{% endblock %}

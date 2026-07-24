@@ -1,0 +1,42 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">Quản lý đơn hàng</h1>
+<div class="category-pills" style="margin-bottom:1rem;">
+  <a href="{{ url_for('admin.orders') }}" class="{% if not current_status %}active{% endif %}">Tất cả</a>
+  {% for key, label in order_status.items() %}
+  <a href="{{ url_for('admin.orders', status=key) }}" class="{% if current_status == key %}active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Mã ĐH</th><th>Khách hàng</th><th>SĐT</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày đặt</th><th></th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>#{{ o.MaDonHang }}</td>
+        <td>{{ o.HoTen }}</td>
+        <td>{{ o.SoDienThoai }}</td>
+        <td>{{ format_currency(o.TongTien) }}</td>
+        <td><span class="badge badge-info">{{ order_status.get(o.TrangThai, o.TrangThai) }}</span></td>
+        <td>{{ o.NgayDat }}</td>
+        <td>
+          <a href="{{ url_for('admin.order_detail', order_id=o.MaDonHang) }}" class="btn btn-outline btn-sm">Chi tiết</a>
+          {% if current_user.VaiTro == 'giao_nhan' and o.TrangThai in ['da_xac_nhan', 'dang_xu_ly'] %}
+          <form action="{{ url_for('admin.order_accept_ship', order_id=o.MaDonHang) }}" method="post" style="display:inline;">
+            <button class="btn btn-primary btn-sm">Nhận giao</button>
+          </form>
+          {% endif %}
+          {% if current_user.VaiTro == 'giao_nhan' and o.TrangThai == 'dang_giao' %}
+          <form action="{{ url_for('admin.order_delivered', order_id=o.MaDonHang) }}" method="post" style="display:inline;">
+            <button class="btn btn-accent btn-sm">Đã giao</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;">Không có đơn hàng</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

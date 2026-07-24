@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Thông báo{% endblock %}
+{% block content %}
+<div class="container" style="padding:2rem 1rem;max-width:700px;">
+  <h1 class="page-title">Thông báo</h1>
+  {% for n in notifications %}
+  <div class="card" style="padding:1rem;margin-bottom:.75rem;">
+    <strong>{{ n.TieuDe }}</strong>
+    <p style="margin:.3rem 0;">{{ n.NoiDung }}</p>
+    <small style="color:#64748b;">{{ n.NgayTao }}</small>
+  </div>
+  {% else %}
+  <p style="color:#64748b;">Không có thông báo.</p>
+  {% endfor %}
+</div>
+{% endblock %}

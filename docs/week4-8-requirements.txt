@@ -1,0 +1,23 @@
+BÀI THỰC HÀNH SỐ 4
+Tuần 4:
+Điều chỉnh CSDL đã phân tích nếu chưa đúng
+Tạo CSDL trên 1 hệ quản trị CSDL
+Tạo project web (có thể sử dụng công nghệ tùy ý)
+Thực hiện kết nối
+Triển khai modul Admin của Bán hàng bao gồm các chức năng
+Quản lý thông tin hàng bán (hàng gia dụng) + các danh mục liên quan
+Quản lý giá bán (giá thay đổi + khuyến mãi)
+Tuần 5:
+Quản lý giá bán (giá thay đổi + khuyến mãi)
+Thực hiện module User:
+Hiển thị trang web bán hàng
+Tuần 6 + 7:
+Thực hiện trang bán hàng (tiếp tục)
+Quản lý giỏ hàng
+Đặt hàng
+Quản lý đơn hàng (Trạng thái: dã xác nhận, đang xử lý, đang giao, đã giao, đã hủy)
+Xem lịch sử đơn hàng (khách) – hủy (có thể)
+Comment từ khách hàng
+Tuần 8+ 9
+Thống kê báo cáo
+Advance: Chatbot tư vấn khách hàng

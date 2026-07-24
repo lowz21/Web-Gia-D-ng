@@ -1,0 +1,28 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+  <h1 class="page-title" style="margin:0;">Quản lý khuyến mãi</h1>
+  <a href="{{ url_for('admin.promotion_add') }}" class="btn btn-primary">+ Thêm khuyến mãi</a>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Tên KM</th><th>Giảm (%)</th><th>Sản phẩm</th><th>Từ ngày</th><th>Đến ngày</th><th></th></tr></thead>
+    <tbody>
+      {% for p in promotions %}
+      <tr>
+        <td>{{ p.TenKhuyenMai }}</td>
+        <td>{{ p.PhanTramGiam }}%</td>
+        <td>{{ p.TenSanPham or 'Toàn sàn' }}</td>
+        <td>{{ p.NgayBatDau }}</td>
+        <td>{{ p.NgayKetThuc }}</td>
+        <td>{% if current_user.VaiTro == 'admin' %}
+          <form method="post" action="{{ url_for('admin.promotion_delete', promo_id=p.MaKhuyenMai) }}" style="display:inline;">
+            <button class="btn btn-danger btn-sm" onclick="return confirm('Xóa?')">Xóa</button>
+          </form>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

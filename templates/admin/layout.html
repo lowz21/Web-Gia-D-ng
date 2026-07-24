@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Quản trị{% endblock %}
+{% block content %}
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div style="padding:0 1.25rem 1rem;font-weight:800;color:#fff;">⚙️ Quản trị</div>
+    <a href="{{ url_for('admin.dashboard') }}" class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">Bảng điều khiển</a>
+    <a href="{{ url_for('admin.products') }}" class="{% if 'product' in request.endpoint %}active{% endif %}">Quản lý sản phẩm</a>
+    {% if current_user.VaiTro == 'admin' %}
+    <a href="{{ url_for('admin.categories') }}" class="{% if 'categor' in request.endpoint %}active{% endif %}">Danh mục</a>
+    {% endif %}
+    <a href="{{ url_for('admin.promotions') }}" class="{% if 'promotion' in request.endpoint %}active{% endif %}">Khuyến mãi</a>
+    <a href="{{ url_for('admin.orders') }}" class="{% if 'order' in request.endpoint %}active{% endif %}">Đơn hàng</a>
+    <a href="{{ url_for('admin.statistics') }}" class="{% if request.endpoint == 'admin.statistics' %}active{% endif %}">Thống kê</a>
+    {% if current_user.VaiTro == 'admin' %}
+    <a href="{{ url_for('admin.users') }}" class="{% if 'user' in request.endpoint %}active{% endif %}">Người dùng</a>
+    {% endif %}
+    <a href="{{ url_for('shop.index') }}" style="margin-top:1rem;border-top:1px solid #334155;">← Về trang bán hàng</a>
+  </aside>
+  <div class="admin-content">
+    {% block admin_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">Bảng điều khiển</h1>
+<div class="stats-grid">
+  {% if current_user.VaiTro == 'admin' %}
+  <div class="stat-card"><div class="label">Người dùng</div><div class="value">{{ stats.users }}</div></div>
+  {% endif %}
+  <div class="stat-card"><div class="label">Sản phẩm</div><div class="value">{{ stats.products }}</div></div>
+  <div class="stat-card"><div class="label">Đơn hàng</div><div class="value">{{ stats.orders }}</div></div>
+  <div class="stat-card"><div class="label">Doanh thu</div><div class="value">{{ format_currency(stats.revenue) }}</div></div>
+</div>
+
+<h2 style="font-size:1.1rem;margin-bottom:1rem;">Đơn hàng gần đây</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Mã ĐH</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày đặt</th><th></th></tr></thead>
+    <tbody>
+      {% for o in recent_orders %}
+      <tr>
+        <td>#{{ o.MaDonHang }}</td>
+        <td>{{ o.HoTen }}</td>
+        <td>{{ format_currency(o.TongTien) }}</td>
+        <td><span class="badge badge-info">{{ order_status.get(o.TrangThai, o.TrangThai) }}</span></td>
+        <td>{{ o.NgayDat }}</td>
+        <td><a href="{{ url_for('admin.order_detail', order_id=o.MaDonHang) }}" class="btn btn-outline btn-sm">Chi tiết</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;color:#64748b;">Chưa có đơn hàng</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

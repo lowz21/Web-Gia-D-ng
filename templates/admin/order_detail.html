@@ -1,0 +1,51 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">Đơn hàng #{{ order.MaDonHang }}</h1>
+<div class="card" style="padding:1.5rem;margin-bottom:1rem;">
+  <p><strong>Khách:</strong> {{ order.HoTen }} ({{ order.Email }}, {{ order.SoDienThoai }})</p>
+  <p><strong>Địa chỉ:</strong> {{ order.DiaChiGiao }}</p>
+  <p><strong>Trạng thái:</strong> <span class="badge badge-info">{{ order_status.get(order.TrangThai, order.TrangThai) }}</span></p>
+  <p><strong>Tổng tiền:</strong> {{ format_currency(order.TongTien) }}</p>
+  {% if payment %}<p><strong>Thanh toán:</strong> {{ payment.PhuongThuc }} — {{ payment.TrangThai }}</p>{% endif %}
+  {% if shipping %}<p><strong>Vận chuyển:</strong> {{ shipping.TrangThai }}</p>{% endif %}
+</div>
+
+<div class="table-wrap" style="margin-bottom:1rem;">
+  <table>
+    <thead><tr><th>Sản phẩm</th><th>Cửa hàng</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+    <tbody>{% for item in items %}<tr>
+      <td>{{ item.TenSanPham }}</td><td>{{ item.TenCuaHang }}</td><td>{{ item.SoLuong }}</td>
+      <td>{{ format_currency(item.DonGia) }}</td><td>{{ format_currency(item.ThanhTien) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+</div>
+
+{% if current_user.VaiTro in ['admin', 'chu_cua_hang'] %}
+<form method="post" action="{{ url_for('admin.order_update_status', order_id=order.MaDonHang) }}" class="card" style="padding:1rem;">
+  <h3>Cập nhật trạng thái</h3>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:end;">
+    <div class="form-group" style="margin:0;">
+      <label>Trạng thái</label>
+      <select class="form-control" name="status">
+        {% for key, label in order_status.items() %}
+        <option value="{{ key }}" {% if order.TrangThai == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label>Đơn vị giao nhận (khi chuyển sang Đang giao)</label>
+      <select class="form-control" name="shipper_id">
+        <option value="">-- Chọn --</option>
+        {% for s in shippers %}<option value="{{ s.MaDonVi }}">{{ s.TenDonVi }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Cập nhật</button>
+  </div>
+</form>
+{% endif %}
+
+{% if history %}
+<h3 style="margin-top:1.5rem;">Lịch sử</h3>
+<ul>{% for h in history %}<li>{{ h.NgayCapNhat }}: {{ order_status.get(h.TrangThaiMoi, h.TrangThaiMoi) }}</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

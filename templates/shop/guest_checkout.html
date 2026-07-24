@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Đặt hàng (khách vãng lai){% endblock %}
+{% block content %}
+<div class="container" style="max-width:700px;padding:2rem 1rem;">
+  <h1 class="page-title">Đặt hàng — Khách vãng lai</h1>
+  <p style="color:#64748b;">Thanh toán QR VietQR. Mã đơn sẽ được lưu trên trình duyệt để bạn khôi phục thanh toán sau.</p>
+  <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+    <h3>Sản phẩm</h3>
+    {% for item in items %}
+    {% set price, _ = get_effective_price(item) %}
+    <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #e2e8f0;">
+      <span>{{ item.TenSanPham }} x {{ item.SoLuong }}</span>
+      <span>{{ format_currency(price * item.SoLuong) }}</span>
+    </div>
+    {% endfor %}
+    <div style="display:flex;justify-content:space-between;padding-top:1rem;font-weight:800;font-size:1.1rem;">
+      <span>Tổng cộng</span><span class="price">{{ format_currency(total) }}</span>
+    </div>
+  </div>
+  <form method="post" class="card" style="padding:1.5rem;">
+    <div class="form-group">
+      <label>Địa chỉ giao hàng *</label>
+      <textarea class="form-control" name="address" required placeholder="Nhập địa chỉ giao hàng đầy đủ"></textarea>
+    </div>
+    <input type="hidden" name="payment" value="chuyen_khoan">
+    <p><strong>Phương thức:</strong> Chuyển khoản qua QR (VietQR)</p>
+    <button type="submit" class="btn btn-accent" style="width:100%;">Tạo đơn &amp; hiển thị QR</button>
+  </form>
+  <p style="margin-top:1rem;text-align:center;"><a href="{{ url_for('auth.login') }}">Đăng nhập</a> nếu bạn đã có tài khoản.</p>
+</div>
+{% endblock %}

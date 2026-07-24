@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng chưa thanh toán{% endblock %}
+{% block extra_head %}
+<style>
+  .pending-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
+  .pending-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem;
+    background: #fff;
+  }
+  .pending-card h3 { margin: 0 0 .5rem; }
+  .pending-meta { color: #64748b; font-size: .9rem; }
+  .pending-timer { font-size: 1.5rem; font-weight: 800; color: #dc2626; margin: .75rem 0; }
+  .pending-items { margin: .75rem 0; padding-left: 1rem; color: #334155; }
+  .qr-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(15,23,42,.55);
+    display: none; align-items: center; justify-content: center; z-index: 10000;
+  }
+  .qr-modal-backdrop.open { display: flex; }
+  .qr-modal {
+    background: #fff; border-radius: 12px; padding: 1.5rem; max-width: 420px; width: 92%;
+    text-align: center; position: relative;
+  }
+  .qr-modal-close {
+    position: absolute; top: .5rem; right: .75rem; font-size: 1.5rem; cursor: pointer; color: #94a3b8;
+  }
+  .qr-modal img { max-width: 280px; width: 100%; margin: 1rem auto; display: block; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container" style="max-width:800px;padding:2rem 1rem;">
+  <h1 class="page-title">Đơn hàng chưa thanh toán</h1>
+  <p class="pending-meta">Các đơn QR còn hiệu lực trong {{ payment_deadline_minutes }} phút kể từ lúc đặt.</p>
+  <div id="pending-orders-empty" class="alert alert-info" style="display:none;">Bạn không có đơn nào đang chờ thanh toán.</div>
+  <div id="pending-orders-list" class="pending-list"></div>
+</div>
+
+<div id="qr-modal-backdrop" class="qr-modal-backdrop" aria-hidden="true">
+  <div class="qr-modal" role="dialog" aria-labelledby="qr-modal-title">
+    <span class="qr-modal-close" id="qr-modal-close" aria-label="Đóng">&times;</span>
+    <h2 id="qr-modal-title">Thanh toán QR</h2>
+    <p id="qr-modal-order" class="pending-meta"></p>
+    <img id="qr-modal-image" src="" alt="Mã QR VietQR">
+    <p id="qr-modal-amount" style="font-weight:700;font-size:1.1rem;"></p>
+    <p class="pending-meta">Nội dung chuyển khoản: <strong id="qr-modal-content"></strong></p>
+    <p>Thời gian còn lại: <span id="qr-modal-countdown" class="pending-timer">--:--</span></p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  const listEl = document.getElementById("pending-orders-list");
+  const emptyEl = document.getElementById("pending-orders-empty");
+  const modal = document.getElementById("qr-modal-backdrop");
+  let modalTimer = null;
+  let pollTimer = null;
+  let activeOrder = null;
+
+  function renderOrders(orders) {
+    listEl.innerHTML = "";
+    if (!orders.length) {
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+    orders.forEach((o) => {
+      const card = document.createElement("div");
+      card.className = "pending-card";
+      const itemsHtml = (o.items || [])
+        .map((i) => `<li>${i.TenSanPham} × ${i.SoLuong}</li>`)
+        .join("");
+      const deadline = o.deadline || o.HanThanhToan;
+      card.innerHTML = `
+        <h3>Mã đơn #${o.MaDonHang || o.order_id}</h3>
+        <div class="pending-meta">Trạng thái: Chờ thanh toán QR</div>
+        <div class="pending-timer" data-expires="${deadline}">${PendingOrders.formatCountdown(deadline)}</div>
+        <ul class="pending-items">${itemsHtml}</ul>
+        <p><strong>Tổng tiền:</strong> ${formatCurrency(o.TongTien || o.total)}</p>
+        <button type="button" class="btn btn-accent btn-pay-now" data-order-id="${o.MaDonHang || o.order_id}" data-token="${o.MaTruyCapKhach || o.guest_token || ""}">Thanh toán ngay</button>
+      `;
+      listEl.appendChild(card);
+    });
+    listEl.querySelectorAll(".btn-pay-now").forEach((btn) => {
+      btn.addEventListener("click", () => openQrModal(btn.dataset.orderId, btn.dataset.token));
+    });
+  }
+
+  async function load() {
+    const data = await PendingOrders.fetchPending();
+    renderOrders(data.orders || []);
+  }
+
+  async function openQrModal(orderId, token) {
+    const q = token ? `?token=${encodeURIComponent(token)}` : "";
+    const res = await fetch(`/api/orders/${orderId}/payment-qr${q}`, { credentials: "same-origin" });
+    if (!res.ok) {
+      showToast("Lỗi", "Không thể tải mã QR.", "danger");
+      await load();
+      return;
+    }
+    const o = await res.json();
+    activeOrder = { id: orderId, token: token || o.guest_token };
+    document.getElementById("qr-modal-order").textContent = `Đơn hàng #${o.order_id}`;
+    document.getElementById("qr-modal-image").src = o.qr_url;
+    document.getElementById("qr-modal-amount").textContent = o.total_formatted || formatCurrency(o.total);
+    document.getElementById("qr-modal-content").textContent = `DH${o.order_id}`;
+    modal.classList.add("open");
+    startModalTimers(o.deadline);
+    startPaymentPoll();
+  }
+  
+  function formatCurrency(value) {
+    return new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+  }
+
+  function closeModal() {
+    modal.classList.remove("open");
+    activeOrder = null;
+    if (modalTimer) clearInterval(modalTimer);
+    if (pollTimer) clearInterval(pollTimer);
+  }
+
+  function startModalTimers(expiresAt) {
+    const el = document.getElementById("qr-modal-countdown");
+    if (modalTimer) clearInterval(modalTimer);
+    modalTimer = setInterval(() => {
+      el.textContent = PendingOrders.formatCountdown(expiresAt);
+    }, 1000);
+    el.textContent = PendingOrders.formatCountdown(expiresAt);
+  }
+
+  function startPaymentPoll() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      if (!activeOrder) return;
+      const st = await PendingOrders.pollStatus(activeOrder.id, activeOrder.token);
+      if (!st) return;
+      if (st.is_paid) {
+        PendingOrders.removeOrder(activeOrder.id);
+        closeModal();
+        showToast("Thanh toán thành công!", `Đơn #${st.order_id} đã được thanh toán.`, "success");
+        refreshPendingPaymentBanner();
+        load();
+      } else if (st.is_cancelled) {
+        PendingOrders.removeOrder(activeOrder.id);
+        closeModal();
+        showToast("Đơn đã hủy", "Đơn hàng hết hạn hoặc đã bị hủy.", "warning");
+        refreshPendingPaymentBanner();
+        load();
+      }
+    }, 3000);
+  }
+
+  document.getElementById("qr-modal-close").addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+  setInterval(() => {
+    listEl.querySelectorAll("[data-expires]").forEach((el) => {
+      el.textContent = PendingOrders.formatCountdown(el.getAttribute("data-expires"));
+    });
+  }, 1000);
+
+  load();
+  window.addEventListener("pending-orders-updated", (e) => renderOrders(e.detail.orders || []));
+})();
+</script>
+{% endblock %}

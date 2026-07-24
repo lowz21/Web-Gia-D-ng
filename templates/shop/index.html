@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>🏠 Sàn TMĐT Đồ Gia Dụng</h1>
+    <p>Mua sắm đồ gia dụng chính hãng từ nhiều cửa hàng uy tín. Giao hàng nhanh, thanh toán an toàn.</p>
+    {% if global_promo %}
+    <p style="margin-top:1rem;"><span class="badge badge-sale">🔥 {{ global_promo.TenKhuyenMai }} - Giảm {{ global_promo.PhanTramGiam }}%</span></p>
+    {% endif %}
+  </div>
+</section>
+
+<div class="container">
+  <div class="category-pills">
+    <a href="{{ url_for('shop.index') }}" class="{% if not cat_slug %}active{% endif %}">Tất cả</a>
+    {% for cat in categories %}
+    <a href="{{ url_for('shop.index', **{'danh-muc': cat.Slug}) }}" class="{% if cat_slug == cat.Slug %}active{% endif %}">{{ cat.TenDanhMuc }}</a>
+    {% endfor %}
+  </div>
+
+  {% if keyword %}
+  <p style="margin-bottom:1rem;">Kết quả tìm kiếm cho "<strong>{{ keyword }}</strong>": {{ total }} sản phẩm</p>
+  {% endif %}
+
+  <div class="grid grid-4">
+    {% for p in products %}
+    {% set price, discount = get_effective_price(p) %}
+    <div class="card">
+      <div class="card-img">
+        {% if p.HinhAnh %}
+        <img src="{{ url_for('static', filename=p.HinhAnh) }}" alt="{{ p.TenSanPham }}" style="width:100%;height:100%;object-fit:cover;">
+        {% else %}
+        🍳
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="badge badge-info" style="margin-bottom:.4rem;">{{ p.TenDanhMuc }}</div>
+        <h3 class="card-title"><a href="{{ url_for('shop.product_detail', slug=p.Slug) }}">{{ p.TenSanPham }}</a></h3>
+        <p style="font-size:.82rem;color:#64748b;margin:.3rem 0;">{{ p.TenCuaHang }}</p>
+        <div>
+          <span class="price">{{ format_currency(price) }}</span>
+          {% if discount %}<span class="price-old">{{ format_currency(p.GiaBan) }}</span><span class="badge badge-sale">-{{ discount }}%</span>{% endif %}
+        </div>
+        <form action="{{ url_for('shop.cart_add') }}" method="post" style="margin-top:.75rem;">
+          <input type="hidden" name="product_id" value="{{ p.MaSanPham }}">
+          <input type="hidden" name="quantity" value="1">
+          {% if current_user and current_user.VaiTro in ['khach_hang', 'admin'] %}
+          <button type="submit" class="btn btn-accent btn-sm" style="width:100%;">Thêm giỏ hàng</button>
+          {% else %}
+          <a href="{{ url_for('auth.login') }}" class="btn btn-outline btn-sm" style="width:100%;">Đăng nhập để mua</a>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p style="grid-column:1/-1;text-align:center;padding:2rem;color:#64748b;">
+      {% if keyword %}Không tìm thấy sản phẩm phù hợp với từ khóa tìm kiếm.{% else %}Chưa có sản phẩm.{% endif %}
+    </p>
+    {% endfor %}
+  </div>
+
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    {% for p in range(1, total_pages + 1) %}
+      {% if p == page %}<span class="active">{{ p }}</span>
+      {% else %}<a href="{{ url_for('shop.index', page=p, q=keyword, **{'danh-muc': cat_slug} if cat_slug else {}) }}">{{ p }}</a>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

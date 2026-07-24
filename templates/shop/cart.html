@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Giỏ hàng{% endblock %}
+{% block content %}
+<div class="container" style="padding:2rem 1rem;">
+  <h1 class="page-title">Giỏ hàng</h1>
+  {% if items %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Sản phẩm</th><th>Cửa hàng</th><th>Đơn giá</th><th>Số lượng</th><th>Thành tiền</th><th></th></tr></thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td><strong>{{ item.TenSanPham }}</strong></td>
+          <td>{{ item.TenCuaHang }}</td>
+          <td>{{ format_currency(item.DonGia) }}</td>
+          <td>
+            <form action="{{ url_for('shop.cart_update') }}" method="post" style="display:flex;gap:.3rem;">
+              <input type="hidden" name="qty_{{ item.MaSanPham }}" value="0">
+              {% for other in items %}
+              {% if other.MaSanPham != item.MaSanPham %}
+              <input type="hidden" name="qty_{{ other.MaSanPham }}" value="{{ other.SoLuong }}">
+              {% endif %}
+              {% endfor %}
+              <input class="form-control" type="number" name="qty_{{ item.MaSanPham }}" value="{{ item.SoLuong }}" min="0" max="{{ item.SoLuongTon }}" style="width:80px;">
+              <button type="submit" class="btn btn-outline btn-sm">OK</button>
+            </form>
+          </td>
+          <td>{{ format_currency(item.ThanhTien) }}</td>
+          <td>
+            <form action="{{ url_for('shop.cart_remove', product_id=item.MaSanPham) }}" method="post">
+              <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;align-items:center;gap:1rem;">
+    <strong style="font-size:1.2rem;">Tổng: {{ format_currency(total) }}</strong>
+    <a href="{{ url_for('shop.checkout') }}" class="btn btn-accent">Đặt hàng</a>
+  </div>
+  {% else %}
+  <p>Giỏ hàng trống. <a href="{{ url_for('shop.index') }}">Tiếp tục mua sắm</a></p>
+  {% endif %}
+</div>
+{% endblock %}

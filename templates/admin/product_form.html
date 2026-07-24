@@ -1,0 +1,58 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">{{ 'Sửa sản phẩm' if product else 'Thêm sản phẩm' }}</h1>
+<form method="post" enctype="multipart/form-data" class="card" style="padding:1.5rem;max-width:700px;">
+  <div class="form-group"><label>Tên sản phẩm *</label><input class="form-control" name="name" value="{{ product.TenSanPham if product else '' }}" required></div>
+  <div class="form-group"><label>Mô tả</label><textarea class="form-control" name="description">{{ product.MoTa if product else '' }}"></textarea></div>
+  <div class="form-group"><label>Hình ảnh sản phẩm</label>
+    <input class="form-control" type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+    {% if product and product.HinhAnh %}
+    <div style="margin-top:0.5rem;">
+      <img src="{{ url_for('static', filename=product.HinhAnh) }}" alt="{{ product.TenSanPham }}" style="max-width:150px;max-height:150px;">
+      <p style="font-size:0.85rem;color:#64748b;">Hình ảnh hiện tại</p>
+    </div>
+    {% endif %}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <div class="form-group"><label>Giá bán (đ) *</label><input class="form-control" type="number" name="price" value="{{ product.GiaBan if product else '' }}" required min="1"></div>
+    <div class="form-group"><label>Giá gốc (đ)</label><input class="form-control" type="number" name="original_price" value="{{ product.GiaGoc if product else '' }}"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <div class="form-group"><label>Tồn kho</label><input class="form-control" type="number" name="stock" value="{{ product.SoLuongTon if product else 0 }}" min="0"></div>
+    <div class="form-group"><label>Danh mục</label>
+      <select class="form-control" name="category_id" required>
+        {% for c in categories %}<option value="{{ c.MaDanhMuc }}" {% if product and product.MaDanhMuc == c.MaDanhMuc %}selected{% endif %}>{{ c.TenDanhMuc }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  {% if current_user.VaiTro == 'admin' and not product %}
+  <div class="form-group"><label>Cửa hàng</label>
+    <select class="form-control" name="shop_id">
+      {% for s in shops %}<option value="{{ s.MaCuaHang }}">{{ s.TenCuaHang }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if product %}
+  <div class="form-group"><label>Trạng thái</label>
+    <select class="form-control" name="status">
+      <option value="hoat_dong" {% if product.TrangThai == 'hoat_dong' %}selected{% endif %}>Hoạt động</option>
+      <option value="ngung_ban" {% if product.TrangThai == 'ngung_ban' %}selected{% endif %}>Ngừng bán</option>
+    </select>
+  </div>
+  {% endif %}
+  <h3 style="margin-top:1rem;">SEO</h3>
+  <div class="form-group"><label>Meta Title</label><input class="form-control" name="meta_title" value="{{ product.MetaTitle if product else '' }}"></div>
+  <div class="form-group"><label>Meta Description</label><textarea class="form-control" name="meta_description">{{ product.MetaDescription if product else '' }}"></textarea></div>
+  <div class="form-group"><label>Meta Keyword</label><input class="form-control" name="meta_keyword" value="{{ product.MetaKeyword if product else '' }}"></div>
+  <button type="submit" class="btn btn-primary">Lưu</button>
+  <a href="{{ url_for('admin.products') }}" class="btn btn-outline">Hủy</a>
+</form>
+
+{% if price_history %}
+<h3 style="margin-top:2rem;">Lịch sử thay đổi giá</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Ngày</th><th>Giá cũ</th><th>Giá mới</th><th>Ghi chú</th></tr></thead>
+  <tbody>{% for h in price_history %}<tr><td>{{ h.NgayThayDoi }}</td><td>{{ format_currency(h.GiaCu) if h.GiaCu else '-' }}</td><td>{{ format_currency(h.GiaMoi) }}</td><td>{{ h.GhiChu }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endif %}
+{% endblock %}

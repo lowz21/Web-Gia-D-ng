@@ -1,0 +1,798 @@
+PHÁC THẢO CÁC MODULE CHÍNH CỦA HỆ THỐNG
+1.1 Giới thiệu hệ thống
+Hệ thống được xây dựng là một sàn thương mại điện tử chuyên kinh doanh các mặt hàng đồ gia dụng. Trên hệ thống có nhiều cửa hàng khác nhau tham gia đăng bán sản phẩm. Ngoài ra, hệ thống còn liên kết với nhiều đơn vị giao nhận nhằm hỗ trợ quá trình vận chuyển hàng hóa từ cửa hàng đến khách hàng.
+Mục tiêu của hệ thống là tạo ra một môi trường giao dịch trực tuyến thuận tiện và an toàn cho cả người mua, người bán và các công ty vận chuyển. Khách hàng có thể dễ dàng tìm kiếm, lựa chọn và đặt mua các sản phẩm đồ gia dụng. Các cửa hàng có thể quảng bá sản phẩm, tiếp cận khách hàng và quản lý hoạt động kinh doanh của mình. Các đơn vị giao nhận có cơ hội hợp tác với nhiều cửa hàng để mở rộng hoạt động vận chuyển.
+Để đáp ứng các yêu cầu trên, hệ thống được chia thành nhiều module chức năng khác nhau.
+1.2 Module quản lý người dùng
+Module quản lý người dùng chịu trách nhiệm quản lý toàn bộ thông tin tài khoản tham gia hệ thống. Mỗi đối tượng sử dụng hệ thống như khách hàng, chủ cửa hàng, đơn vị giao nhận hay quản trị viên đều được cấp một tài khoản riêng.
+Module này cho phép người dùng đăng ký tài khoản, cập nhật thông tin cá nhân, thay đổi mật khẩu và quản lý hồ sơ cá nhân. Ngoài ra, hệ thống còn thực hiện phân quyền nhằm đảm bảo mỗi đối tượng chỉ được sử dụng những chức năng phù hợp với vai trò của mình.
+Đây là module quan trọng vì mọi hoạt động trên hệ thống đều phải thông qua tài khoản người dùng.
+1.3 Module quản lý sản phẩm
+Module quản lý sản phẩm được sử dụng bởi các chủ cửa hàng để đăng tải và quản lý các sản phẩm đồ gia dụng mà họ kinh doanh.
+Thông qua module này, chủ cửa hàng có thể cập nhật tên sản phẩm, mô tả, hình ảnh, giá bán, số lượng tồn kho và các thông tin liên quan khác. Hệ thống sẽ lưu trữ các thông tin này và cung cấp cho khách hàng trong quá trình tìm kiếm hoặc xem sản phẩm.
+Ngoài ra, module còn hỗ trợ phân loại sản phẩm theo danh mục nhằm giúp việc quản lý và tìm kiếm trở nên thuận tiện hơn.
+1.4 Module quản lý đơn hàng
+Module quản lý đơn hàng chịu trách nhiệm xử lý toàn bộ quá trình mua bán từ khi khách hàng đặt hàng cho đến khi đơn hàng hoàn thành.
+Khi khách hàng xác nhận mua sản phẩm, hệ thống sẽ tạo đơn hàng mới và lưu các thông tin liên quan như khách hàng, sản phẩm, số lượng, địa chỉ giao hàng và phương thức thanh toán.
+Trong suốt quá trình xử lý, trạng thái đơn hàng sẽ được cập nhật liên tục như: Chờ thanh toán, Đã thanh toán, Đang xử lý, Đang giao hàng và Hoàn thành.
+Đây là module trung tâm kết nối giữa khách hàng, cửa hàng và đơn vị vận chuyển.
+1.5 Module quản lý vận chuyển
+Module quản lý vận chuyển cho phép hệ thống kết nối với nhiều công ty giao nhận khác nhau.
+Sau khi cửa hàng xác nhận đơn hàng, hệ thống sẽ gửi yêu cầu vận chuyển đến đơn vị giao nhận được lựa chọn. Công ty vận chuyển sẽ tiếp nhận đơn hàng, thực hiện giao hàng và cập nhật trạng thái vận chuyển lên hệ thống.
+Thông qua module này, khách hàng có thể theo dõi được tình trạng giao hàng theo thời gian thực.
+1.6 Module thanh toán
+Module thanh toán hỗ trợ việc thực hiện các giao dịch tài chính giữa khách hàng và hệ thống.
+Khách hàng có thể lựa chọn nhiều hình thức thanh toán khác nhau như thanh toán trực tuyến thông qua cổng thanh toán hoặc thanh toán khi nhận hàng (COD).
+Sau khi giao dịch hoàn tất, hệ thống sẽ nhận kết quả từ cổng thanh toán và cập nhật trạng thái thanh toán cho đơn hàng tương ứng.
+1.7 Module đánh giá và phản hồi
+Sau khi nhận được hàng, khách hàng có thể sử dụng module đánh giá để chia sẻ nhận xét về sản phẩm, cửa hàng hoặc đơn vị giao nhận.
+Những đánh giá này sẽ được lưu trữ trên hệ thống và hiển thị công khai để hỗ trợ những khách hàng khác trong quá trình lựa chọn sản phẩm.
+Module này góp phần nâng cao chất lượng dịch vụ và tăng tính minh bạch của hệ thống.
+1.8 Module thông báo
+Module thông báo có nhiệm vụ gửi các thông tin quan trọng đến người dùng.
+Mỗi khi phát sinh sự kiện như đặt hàng thành công, thanh toán thành công, xác nhận đơn hàng hoặc giao hàng thành công, hệ thống sẽ gửi thông báo đến người dùng thông qua Email, SMS hoặc thông báo trực tiếp trên website.
+Nhờ đó người dùng luôn nắm được trạng thái mới nhất của các giao dịch.
+1.9 Module quản trị hệ thống
+Module quản trị hệ thống được sử dụng bởi quản trị viên.
+Quản trị viên có thể quản lý tài khoản người dùng, kiểm soát các cửa hàng hoạt động trên hệ thống, theo dõi các giao dịch phát sinh và thống kê tình hình hoạt động của toàn bộ hệ thống.
+Module này đóng vai trò đảm bảo hệ thống vận hành ổn định, an toàn và hiệu quả.
+XÁC ĐỊNH CÁC ACTOR VÀ USE CASE CỦA CÁC MODULE
+2.1 Danh sách Actor
+STT
+Actor
+Mô tả
+1
+Khách hàng
+Người mua sản phẩm trên hệ thống
+2
+Chủ cửa hàng
+Người đăng bán sản phẩm và xử lý đơn hàng
+3
+Đơn vị giao nhận
+Đơn vị thực hiện vận chuyển hàng hóa
+4
+Quản trị viên
+Người quản lý và giám sát hệ thống
+5
+Cổng thanh toán
+Hệ thống thanh toán trực tuyến bên ngoài
+2.2 Bảng Use Case của Khách hàng
+Mã UC
+Tên Use Case
+UC01
+Tìm kiếm sản phẩm
+UC02
+Xem chi tiết sản phẩm
+UC03
+Đặt hàng
+UC04
+Thanh toán đơn hàng
+UC05
+Theo dõi đơn hàng
+UC06
+Đánh giá sản phẩm
+2.3 Bảng Use Case của Chủ cửa hàng
+Mã UC
+Tên Use Case
+UC07
+Quản lý sản phẩm
+UC08
+Xử lý đơn hàng
+UC11
+Chọn đơn vị giao nhận
+UC12
+Xem báo cáo doanh thu
+2.4 Bảng Use Case của Đơn vị giao nhận
+Mã UC
+Tên Use Case
+UC09
+Nhận đơn vận chuyển
+UC13
+Cập nhật trạng thái giao hàng
+2.5 Bảng Use Case của Quản trị viên
+Mã UC
+Tên Use Case
+UC10
+Quản lý người dùng
+UC14
+Quản lý cửa hàng
+UC15
+Xem thống kê hệ thống
+2.6 Bảng Use Case của Cổng thanh toán
+Mã UC
+Tên Use Case
+UC16
+Xác nhận thanh toán
+UC TỔNG QUÁT
+UC01: Tìm kiếm sản phẩm
+Use Case Description
+Name
+Tìm kiếm sản phẩm
+Code
+UC01
+Description
+Cho phép khách hàng tìm kiếm sản phẩm theo tên hoặc từ khóa
+Actor
+Khách hàng
+Trigger
+Khách hàng nhập từ khóa tìm kiếm
+Pre-condition
+Hệ thống đang hoạt động bình thường
+Post-condition
+Danh sách sản phẩm phù hợp được hiển thị
+Activities
+Actor
+System
+Main Flow: Tìm kiếm thành công
+1. Khách hàng nhập từ khóa tìm kiếm vào ô tìm kiếm (SC01).
+2. Hệ thống tiếp nhận từ khóa và tìm kiếm trong cơ sở dữ liệu.
+3. Hệ thống hiển thị danh sách sản phẩm phù hợp (SC02).
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Từ khóa
+Từ khóa tìm kiếm không được để trống
+BR02
+Hiển thị
+Chỉ hiển thị các sản phẩm đang hoạt động
+System Message
+Code
+Message
+MS01
+Không tìm thấy sản phẩm phù hợp với từ khóa tìm kiếm
+MS02
+Vui lòng nhập từ khóa tìm kiếm
+UC02: Xem chi tiết sản phẩm
+Use Case Description
+Name
+Xem chi tiết sản phẩm
+Code
+UC02
+Description
+Cho phép khách hàng xem thông tin chi tiết của sản phẩm
+Actor
+Khách hàng
+Trigger
+Khách hàng chọn một sản phẩm
+Pre-condition
+Sản phẩm tồn tại trong hệ thống
+Post-condition
+Thông tin chi tiết sản phẩm được hiển thị
+Activities
+Actor
+System
+Main Flow: Xem sản phẩm thành công
+1. Khách hàng chọn sản phẩm cần xem (SC03).
+2. Hệ thống lấy thông tin sản phẩm từ cơ sở dữ liệu.
+3. Hệ thống hiển thị thông tin chi tiết sản phẩm (SC04).
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Hiển thị sản phẩm
+Chỉ hiển thị sản phẩm còn tồn tại
+System Message
+Code
+Message
+MS01
+Sản phẩm không tồn tại hoặc đã bị gỡ khỏi hệ thống
+UC03: Đặt hàng
+Use Case Description
+Name
+Đặt hàng
+Code
+UC03
+Description
+Cho phép khách hàng tạo đơn hàng mua sản phẩm
+Actor
+Khách hàng
+Trigger
+Khách hàng nhấn nút Đặt hàng
+Pre-condition
+Khách hàng đã đăng nhập và sản phẩm còn hàng
+Post-condition
+Đơn hàng được tạo thành công
+Activities
+Actor
+System
+Main Flow: Đặt hàng thành công
+1. Khách hàng chọn sản phẩm và nhấn Đặt hàng (SC05).
+2. Hệ thống hiển thị thông tin đơn hàng.
+3. Khách hàng nhập địa chỉ giao hàng.
+4. Khách hàng xác nhận đặt hàng.
+5. Hệ thống tạo đơn hàng và lưu vào cơ sở dữ liệu (SC06).
+6. Hệ thống thông báo đặt hàng thành công.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Tồn kho
+Sản phẩm phải còn hàng
+BR02
+Địa chỉ
+Địa chỉ giao hàng không được để trống
+System Message
+Code
+Message
+MS01
+Đặt hàng thành công
+MS02
+Sản phẩm đã hết hàng
+MS03
+Vui lòng nhập địa chỉ giao hàng
+UC04: Thanh toán đơn hàng
+Use Case Description
+Name
+Thanh toán đơn hàng
+Code
+UC04
+Description
+Cho phép khách hàng thanh toán đơn hàng bằng hình thức trực tuyến hoặc thanh toán khi nhận hàng (COD)
+Actor
+Khách hàng
+Trigger
+Khách hàng nhấn nút Thanh toán
+Pre-condition
+Đơn hàng đã được tạo và ở trạng thái Chờ thanh toán
+Post-condition
+Đơn hàng được cập nhật trạng thái Đã thanh toán hoặc Chờ giao hàng
+Activities
+Actor
+System
+Main Flow: Thanh toán thành công
+1. Khách hàng chọn đơn hàng cần thanh toán (SC07).
+2. Hệ thống hiển thị thông tin thanh toán.
+3. Khách hàng lựa chọn phương thức thanh toán.
+4. Hệ thống chuyển đến cổng thanh toán hoặc ghi nhận COD.
+5. Khách hàng xác nhận thanh toán.
+6. Hệ thống nhận kết quả giao dịch từ cổng thanh toán.
+7. Hệ thống cập nhật trạng thái đơn hàng thành "Đã thanh toán" (SC08).
+8. Hệ thống gửi thông báo thanh toán thành công.
+Alternative Flow: Thanh toán thất bại
+Actor
+System
+1. Khách hàng thực hiện thanh toán.
+2. Giao dịch bị từ chối hoặc lỗi kết nối.
+3. Hệ thống giữ nguyên trạng thái Chờ thanh toán.
+4. Hiển thị thông báo lỗi cho khách hàng.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Thanh toán
+Chỉ đơn hàng chưa thanh toán mới được thực hiện thanh toán
+BR02
+COD
+Cho phép thanh toán khi nhận hàng
+BR03
+Trực tuyến
+Phải nhận được phản hồi từ cổng thanh toán
+System Message
+Code
+Message
+MS01
+Thanh toán thành công
+MS02
+Giao dịch thất bại
+MS03
+Không thể kết nối cổng thanh toán
+UC05: Theo dõi đơn hàng
+Use Case Description
+Name
+Theo dõi đơn hàng
+Code
+UC05
+Description
+Cho phép khách hàng theo dõi trạng thái đơn hàng
+Actor
+Khách hàng
+Trigger
+Khách hàng chọn chức năng Theo dõi đơn hàng
+Pre-condition
+Khách hàng có ít nhất một đơn hàng
+Post-condition
+Trạng thái đơn hàng được hiển thị
+Activities
+Actor
+System
+Main Flow: Xem trạng thái đơn hàng
+1. Khách hàng chọn đơn hàng cần theo dõi (SC09).
+2. Hệ thống truy xuất thông tin đơn hàng.
+3. Hệ thống hiển thị trạng thái hiện tại.
+4. Hệ thống hiển thị lịch sử thay đổi trạng thái đơn hàng.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Quyền truy cập
+Chỉ chủ sở hữu đơn hàng mới được xem
+BR02
+Trạng thái
+Hiển thị trạng thái mới nhất
+System Message
+Code
+Message
+MS01
+Không tìm thấy đơn hàng
+MS02
+Đơn hàng đang được xử lý
+MS03
+Đơn hàng đã giao thành công
+UC06: Đánh giá sản phẩm
+Use Case Description
+Name
+Đánh giá sản phẩm
+Code
+UC06
+Description
+Cho phép khách hàng đánh giá sản phẩm sau khi nhận hàng
+Actor
+Khách hàng
+Trigger
+Khách hàng nhấn nút Đánh giá
+Pre-condition
+Đơn hàng đã hoàn thành
+Post-condition
+Đánh giá được lưu vào hệ thống
+Activities
+Actor
+System
+Main Flow: Đánh giá thành công
+1. Khách hàng chọn sản phẩm cần đánh giá (SC10).
+2. Hệ thống hiển thị biểu mẫu đánh giá.
+3. Khách hàng nhập số sao và nội dung đánh giá.
+4. Khách hàng nhấn Gửi đánh giá.
+5. Hệ thống lưu đánh giá vào cơ sở dữ liệu.
+6. Hệ thống hiển thị đánh giá trên trang sản phẩm.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Điều kiện đánh giá
+Chỉ khách hàng đã mua mới được đánh giá
+BR02
+Số sao
+Từ 1 đến 5 sao
+BR03
+Nội dung
+Không chứa nội dung vi phạm
+System Message
+Code
+Message
+MS01
+Gửi đánh giá thành công
+MS02
+Bạn chưa mua sản phẩm này
+MS03
+Nội dung đánh giá không hợp lệ
+UC07: Quản lý sản phẩm
+Use Case Description
+Name
+Quản lý sản phẩm
+Code
+UC07
+Description
+Cho phép chủ cửa hàng thêm, sửa, xóa và cập nhật sản phẩm
+Actor
+Chủ cửa hàng
+Trigger
+Chủ cửa hàng chọn chức năng Quản lý sản phẩm
+Pre-condition
+Chủ cửa hàng đã đăng nhập
+Post-condition
+Thông tin sản phẩm được cập nhật
+Activities
+Actor
+System
+Main Flow: Cập nhật sản phẩm thành công
+1. Chủ cửa hàng chọn chức năng Quản lý sản phẩm (SC11).
+2. Hệ thống hiển thị danh sách sản phẩm.
+3. Chủ cửa hàng thêm mới hoặc chỉnh sửa thông tin sản phẩm.
+4. Chủ cửa hàng nhấn Lưu.
+5. Hệ thống kiểm tra dữ liệu nhập.
+6. Hệ thống lưu thông tin sản phẩm.
+7. Hệ thống thông báo thành công.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Giá bán
+Giá sản phẩm phải lớn hơn 0
+BR02
+Tồn kho
+Số lượng tồn kho không được âm
+BR03
+Tên sản phẩm
+Không được trùng trong cùng cửa hàng
+System Message
+Code
+Message
+MS01
+Cập nhật sản phẩm thành công
+MS02
+Dữ liệu sản phẩm không hợp lệ
+UC08: Xử lý đơn hàng
+Use Case Description
+Name
+Xử lý đơn hàng
+Code
+UC08
+Description
+Cho phép chủ cửa hàng xác nhận và chuẩn bị đơn hàng
+Actor
+Chủ cửa hàng
+Trigger
+Có đơn hàng mới
+Pre-condition
+Đơn hàng đã được đặt thành công
+Post-condition
+Đơn hàng chuyển sang trạng thái Đang xử lý
+Activities
+Actor
+System
+Main Flow: Xử lý đơn hàng thành công
+1. Chủ cửa hàng mở danh sách đơn hàng mới (SC12).
+2. Hệ thống hiển thị chi tiết đơn hàng.
+3. Chủ cửa hàng kiểm tra tồn kho.
+4. Chủ cửa hàng xác nhận đơn hàng.
+5. Hệ thống cập nhật trạng thái Đang xử lý.
+6. Hệ thống gửi thông báo cho khách hàng.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Tồn kho
+Phải đủ số lượng sản phẩm
+BR02
+Xác nhận
+Chỉ đơn chưa xử lý mới được xác nhận
+System Message
+Code
+Message
+MS01
+Xử lý đơn hàng thành công
+MS02
+Không đủ hàng trong kho
+UC09: Nhận đơn vận chuyển
+Use Case Description
+Name
+Nhận đơn vận chuyển
+Code
+UC09
+Description
+Cho phép đơn vị giao nhận tiếp nhận đơn hàng cần giao
+Actor
+Đơn vị giao nhận
+Trigger
+Có yêu cầu giao hàng mới
+Pre-condition
+Đơn hàng đã được xác nhận
+Post-condition
+Đơn hàng được gán cho đơn vị vận chuyển
+Activities
+Actor
+System
+Main Flow: Tiếp nhận đơn thành công
+1. Đơn vị giao nhận xem danh sách yêu cầu giao hàng (SC13).
+2. Hệ thống hiển thị danh sách đơn cần giao.
+3. Đơn vị giao nhận chọn nhận đơn.
+4. Hệ thống cập nhật đơn vị vận chuyển.
+5. Hệ thống chuyển trạng thái sang Đang giao hàng.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Tiếp nhận
+Mỗi đơn chỉ thuộc một đơn vị giao nhận
+BR02
+Trạng thái
+Chỉ nhận đơn đã xác nhận
+System Message
+Code
+Message
+MS01
+Nhận đơn vận chuyển thành công
+MS02
+Đơn hàng đã được đơn vị khác tiếp nhận
+UC10: Quản lý người dùng
+Use Case Description
+Name
+Quản lý người dùng
+Code
+UC10
+Description
+Cho phép quản trị viên quản lý tài khoản người dùng
+Actor
+Quản trị viên
+Trigger
+Chọn chức năng Quản lý người dùng
+Pre-condition
+Quản trị viên đã đăng nhập
+Post-condition
+Thông tin người dùng được cập nhật
+Activities
+Actor
+System
+Main Flow: Quản lý người dùng thành công
+1. Quản trị viên mở chức năng Quản lý người dùng (SC14).
+2. Hệ thống hiển thị danh sách người dùng.
+3. Quản trị viên chọn người dùng cần quản lý.
+4. Quản trị viên cập nhật trạng thái hoặc thông tin.
+5. Hệ thống lưu thay đổi.
+6. Hệ thống thông báo cập nhật thành công.
+Business Rules
+Rule No.
+Rule
+Description
+BR01
+Quyền hạn
+Chỉ Admin được phép quản lý người dùng
+BR02
+Khóa tài khoản
+Không được xóa dữ liệu giao dịch đã phát sinh
+System Message
+Code
+Message
+MS01
+Cập nhật thông tin người dùng thành công
+MS02
+Không đủ quyền thực hiện chức năng
+MS03
+Người dùng không tồn tại
+ACTIVITY DIAGRAM ĐẶT HÀNG
+ACTIVITY XỬ LÝ ĐƠN HÀNG
+ACTIVITY GIAO HÀNG
+SEQUENCE DIAGRAM ĐẶT HÀNG
+SEQUECE DIAGRAM THANH TOÁN
+CLASS DIAGRAM TỔNG QUÁT
+Thiết kế CSDL cho đề tài trên, đặc biệt tập trung phần module Bán + Mua hàng
+Vẽ sơ đồ ERD
+Thiết kế DB schema (các bảng dữ liệu)
+3. DATABASE SCHEMA
+3.1 Bảng NguoiDung
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaNguoiDung
+INT
+PK
+HoTen
+VARCHAR(100)
+NOT NULL
+Email
+VARCHAR(100)
+UNIQUE
+MatKhau
+VARCHAR(255)
+NOT NULL
+SoDienThoai
+VARCHAR(15)
+VaiTro
+VARCHAR(20)
+TrangThai
+VARCHAR(20)
+Mô tả: Lưu thông tin người dùng của hệ thống, bao gồm người mua và chủ cửa hàng.
+3.2 Bảng CuaHang
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaCuaHang
+INT
+PK
+TenCuaHang
+VARCHAR(100)
+NOT NULL
+DiaChi
+VARCHAR(255)
+MoTa
+TEXT
+NgayTao
+DATE
+MaNguoiDung
+INT
+FK
+Khóa ngoại:
+MaNguoiDung → NguoiDung(MaNguoiDung)
+Mô tả: Lưu thông tin các cửa hàng tham gia bán hàng trên sàn.
+3.3 Bảng DanhMuc
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaDanhMuc
+INT
+PK
+TenDanhMuc
+VARCHAR(100)
+NOT NULL
+Slug
+VARCHAR(150)
+UNIQUE
+MoTa
+TEXT
+Mô tả: Phân loại sản phẩm theo nhóm ngành hàng.
+3.4 Bảng SanPham
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaSanPham
+INT
+PK
+TenSanPham
+VARCHAR(200)
+NOT NULL
+MoTa
+TEXT
+GiaBan
+DECIMAL(15,2)
+SoLuongTon
+INT
+HinhAnh
+VARCHAR(255)
+Slug
+VARCHAR(250)
+UNIQUE
+MetaTitle
+VARCHAR(255)
+MetaDescription
+TEXT
+MetaKeyword
+VARCHAR(255)
+TrangThai
+VARCHAR(20)
+MaDanhMuc
+INT
+FK
+MaCuaHang
+INT
+FK
+Khóa ngoại:
+MaDanhMuc → DanhMuc(MaDanhMuc)MaCuaHang → CuaHang(MaCuaHang)
+Mô tả: Lưu thông tin sản phẩm được đăng bán trên sàn và hỗ trợ SEO.
+3.5 Bảng GioHang
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaGioHang
+INT
+PK
+NgayTao
+DATE
+MaNguoiDung
+INT
+FK
+Khóa ngoại:
+MaNguoiDung → NguoiDung(MaNguoiDung)
+Mô tả: Lưu giỏ hàng của khách hàng.
+3.6 Bảng ChiTietGioHang
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaGioHang
+INT
+PK, FK
+MaSanPham
+INT
+PK, FK
+SoLuong
+INT
+Khóa chính:
+(MaGioHang, MaSanPham)
+Khóa ngoại:
+MaGioHang → GioHang(MaGioHang)MaSanPham → SanPham(MaSanPham)
+Mô tả: Lưu danh sách sản phẩm trong giỏ hàng.
+3.7 Bảng DonHang
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaDonHang
+INT
+PK
+NgayDat
+DATETIME
+TongTien
+DECIMAL(15,2)
+DiaChiGiao
+VARCHAR(255)
+TrangThai
+VARCHAR(50)
+MaKhachHang
+INT
+FK
+Khóa ngoại:
+MaKhachHang → NguoiDung(MaNguoiDung)
+Mô tả: Lưu thông tin đơn hàng của khách hàng.
+3.8 Bảng ChiTietDonHang
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaDonHang
+INT
+PK, FK
+MaSanPham
+INT
+PK, FK
+SoLuong
+INT
+DonGia
+DECIMAL(15,2)
+ThanhTien
+DECIMAL(15,2)
+Khóa chính:
+(MaDonHang, MaSanPham)
+Khóa ngoại:
+MaDonHang → DonHang(MaDonHang)MaSanPham → SanPham(MaSanPham)
+Mô tả: Lưu chi tiết các sản phẩm thuộc từng đơn hàng.
+3.9 Bảng ThanhToan
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaThanhToan
+INT
+PK
+PhuongThuc
+VARCHAR(50)
+SoTien
+DECIMAL(15,2)
+NgayThanhToan
+DATETIME
+TrangThai
+VARCHAR(50)
+MaDonHang
+INT
+FK
+Khóa ngoại:
+MaDonHang → DonHang(MaDonHang)
+Mô tả: Quản lý thông tin thanh toán của đơn hàng.
+3.10 Bảng DonViGiaoNhan
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaDonVi
+INT
+PK
+TenDonVi
+VARCHAR(100)
+DiaChi
+VARCHAR(255)
+SoDienThoai
+VARCHAR(15)
+Email
+VARCHAR(100)
+Mô tả: Lưu thông tin các đơn vị vận chuyển liên kết với sàn.
+3.11 Bảng VanChuyen
+Thuộc tính
+Kiểu dữ liệu
+Ràng buộc
+MaVanChuyen
+INT
+PK
+PhiVanChuyen
+DECIMAL(15,2)
+TrangThai
+VARCHAR(50)
+NgayGiaoDuKien
+DATE
+NgayGiaoThucTe
+DATE
+MaDonHang
+INT
+FK
+MaDonVi
+INT
+FK
+Khóa ngoại:
+MaDonHang → DonHang(MaDonHang)MaDonVi → DonViGiaoNhan(MaDonVi)
+Mô tả: Quản lý quá trình giao hàng cho từng đơn hàng.
+Lưu ý:
+Vấn đề DB liên quan đến SEO sau này
+Đặt tên file: MSV_Hoten_Lab3.docx

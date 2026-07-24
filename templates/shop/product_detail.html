@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ product.MetaTitle or product.TenSanPham }}{% endblock %}
+{% block meta_description %}{{ product.MetaDescription or product.MoTa[:160] }}{% endblock %}
+{% block meta_keywords %}{{ product.MetaKeyword or (product.TenSanPham + ', ' + product.TenDanhMuc + ', đồ gia dụng') }}{% endblock %}
+{% block og_title %}{{ product.MetaTitle or product.TenSanPham }} | Gia Dụng Pro{% endblock %}
+{% block og_description %}{{ product.MetaDescription or product.MoTa[:160] }}{% endblock %}
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": "{{ product.TenSanPham }}",
+  "description": "{{ product.MetaDescription or product.MoTa }}",
+  "image": "{{ url_for('static', filename='img/products/' + product.Slug + '.jpg', _external=True) }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "{{ product.TenCuaHang }}"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "{{ request.url }}",
+    "priceCurrency": "VND",
+    "price": "{{ effective_price }}",
+    "priceValidUntil": "2026-12-31",
+    "availability": "https://schema.org/{% if product.SoLuongTon > 0 %}InStock{% else %}OutOfStock{% endif %}",
+    "seller": {
+      "@type": "Organization",
+      "name": "Gia Dụng Pro"
+    }
+  },
+  "aggregateRating": {% if avg_rating and avg_rating.cnt %}{
+    "@type": "AggregateRating",
+    "ratingValue": "{{ avg_rating.avg|round(1) }}",
+    "reviewCount": "{{ avg_rating.cnt }}"
+  }{% else %}null{% endif %},
+  "category": "{{ product.TenDanhMuc }}"
+}
+</script>
+{% endblock %}
+{% block content %}
+<div class="container" style="padding:2rem 1rem;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+    <div class="card">
+      <div class="card-img" style="height:360px;">
+        {% if product.HinhAnh %}
+        <img src="{{ url_for('static', filename=product.HinhAnh) }}" alt="{{ product.TenSanPham }}" style="width:100%;height:100%;object-fit:cover;">
+        {% else %}
+        🍳
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      <span class="badge badge-info">{{ product.TenDanhMuc }}</span>
+      <h1 style="margin:.5rem 0 1rem;">{{ product.TenSanPham }}</h1>
+      <p style="color:#64748b;">Cửa hàng: <strong>{{ product.TenCuaHang }}</strong> — {{ product.DiaChiCuaHang }}</p>
+      <div style="margin:1rem 0;">
+        <span class="price" style="font-size:1.8rem;">{{ format_currency(effective_price) }}</span>
+        {% if discount %}<span class="price-old">{{ format_currency(product.GiaBan) }}</span><span class="badge badge-sale">-{{ discount }}%</span>{% endif %}
+      </div>
+      {% if avg_rating and avg_rating.cnt %}
+      <div class="stars">{% for i in range(5) %}{% if i < (avg_rating.avg|round|int) %}★{% else %}☆{% endif %}{% endfor %}
+        <span style="color:#64748b;font-size:.9rem;">({{ avg_rating.cnt }} đánh giá)</span>
+      </div>
+      {% endif %}
+      <p style="margin:1rem 0;">{{ product.MoTa }}</p>
+      <p>Tồn kho: <strong>{{ product.SoLuongTon }}</strong> sản phẩm</p>
+      {% if product.SoLuongTon > 0 %}
+      <form action="{{ url_for('shop.cart_add') }}" method="post" style="display:flex;gap:.75rem;margin-top:1rem;align-items:center;">
+        <input type="hidden" name="product_id" value="{{ product.MaSanPham }}">
+        <input class="form-control" type="number" name="quantity" value="1" min="1" max="{{ product.SoLuongTon }}" style="width:80px;">
+        {% if current_user and current_user.VaiTro in ['khach_hang', 'admin'] %}
+        <button type="submit" class="btn btn-accent">Thêm vào giỏ hàng</button>
+        {% else %}
+        <button formaction="{{ url_for('shop.guest_cart_add') }}" formmethod="post" type="submit" class="btn btn-accent">Mua QR (khách)</button>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline btn-sm">Đăng nhập</a>
+        {% endif %}
+      </form>
+      {% else %}
+      <span class="badge badge-warning">Hết hàng</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <section style="margin-top:3rem;">
+    <h2>Đánh giá sản phẩm</h2>
+    {% if can_review %}
+    <form method="post" action="{{ url_for('shop.add_review', slug=product.Slug) }}" class="card" style="padding:1rem;margin-bottom:1rem;">
+      <div class="form-group"><label>Số sao (1-5)</label><input class="form-control" type="number" name="stars" min="1" max="5" required></div>
+      <div class="form-group"><label>Nội dung</label><textarea class="form-control" name="content" required></textarea></div>
+      <button type="submit" class="btn btn-primary">Gửi đánh giá</button>
+    </form>
+    {% endif %}
+    {% for r in reviews %}
+    <div class="card" style="padding:1rem;margin-bottom:.75rem;">
+      <strong>{{ r.HoTen }}</strong> <span class="stars">{% for i in range(r.SoSao) %}★{% endfor %}</span>
+      <p style="margin:.4rem 0 0;">{{ r.NoiDung }}</p>
+      <small style="color:#64748b;">{{ r.NgayDanhGia }}</small>
+    </div>
+    {% else %}
+    <p style="color:#64748b;">Chưa có đánh giá.</p>
+    {% endfor %}
+  </section>
+
+  {% if related %}
+  <section style="margin-top:2rem;">
+    <h2>Sản phẩm liên quan</h2>
+    <div class="grid grid-4">
+      {% for p in related %}
+      {% set price, discount = get_effective_price(p) %}
+      <div class="card">
+        <div class="card-img">🍳</div>
+        <div class="card-body">
+          <h3 class="card-title"><a href="{{ url_for('shop.product_detail', slug=p.Slug) }}">{{ p.TenSanPham }}</a></h3>
+          <span class="price">{{ format_currency(price) }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

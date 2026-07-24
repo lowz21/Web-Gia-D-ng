@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng của tôi{% endblock %}
+{% block content %}
+<div class="container" style="padding:2rem 1rem;">
+  <h1 class="page-title">Đơn hàng của tôi</h1>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Mã ĐH</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>#{{ o.MaDonHang }}</td>
+          <td>{{ o.NgayDat }}</td>
+          <td>{{ format_currency(o.TongTien) }}</td>
+          <td><span class="badge badge-info">{{ order_status.get(o.TrangThai, o.TrangThai) }}</span></td>
+          <td><a href="{{ url_for('shop.order_detail', order_id=o.MaDonHang) }}" class="btn btn-outline btn-sm">Chi tiết</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;">Chưa có đơn hàng</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

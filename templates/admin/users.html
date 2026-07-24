@@ -1,0 +1,26 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">Quản lý người dùng</h1>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>Họ tên</th><th>Email</th><th>SĐT</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.MaNguoiDung }}</td>
+        <td>{{ u.HoTen }}</td>
+        <td>{{ u.Email }}</td>
+        <td>{{ u.SoDienThoai }}</td>
+        <td>{{ role_labels.get(u.VaiTro, u.VaiTro) }}</td>
+        <td><span class="badge {% if u.TrangThai == 'hoat_dong' %}badge-success{% else %}badge-warning{% endif %}">{{ u.TrangThai }}</span></td>
+        <td>
+          <form method="post" action="{{ url_for('admin.user_toggle', uid=u.MaNguoiDung) }}">
+            <button class="btn btn-outline btn-sm">{{ 'Khóa' if u.TrangThai == 'hoat_dong' else 'Mở khóa' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

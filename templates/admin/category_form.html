@@ -1,0 +1,10 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">{{ 'Sửa danh mục' if category else 'Thêm danh mục' }}</h1>
+<form method="post" class="card" style="padding:1.5rem;max-width:500px;">
+  <div class="form-group"><label>Tên danh mục</label><input class="form-control" name="name" value="{{ category.TenDanhMuc if category else '' }}" required></div>
+  {% if category %}<div class="form-group"><label>Slug</label><input class="form-control" name="slug" value="{{ category.Slug }}"></div>{% endif %}
+  <div class="form-group"><label>Mô tả</label><textarea class="form-control" name="description">{{ category.MoTa if category else '' }}</textarea></div>
+  <button type="submit" class="btn btn-primary">Lưu</button>
+</form>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<h1 class="page-title">Thống kê & Báo cáo</h1>
+<div class="stats-grid">
+  <div class="stat-card"><div class="label">Tổng doanh thu</div><div class="value">{{ format_currency(total_revenue) }}</div></div>
+  <div class="stat-card"><div class="label">Tổng đơn hàng</div><div class="value">{{ total_orders }}</div></div>
+</div>
+
+<h2 style="font-size:1.1rem;">Doanh thu theo tháng</h2>
+<div class="table-wrap" style="margin-bottom:1.5rem;">
+  <table>
+    <thead><tr><th>Tháng</th><th>Doanh thu</th></tr></thead>
+    <tbody>{% for r in revenue_by_month %}<tr><td>{{ r.thang }}</td><td>{{ format_currency(r.doanh_thu) }}</td></tr>{% else %}<tr><td colspan="2">Chưa có dữ liệu</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+
+<h2 style="font-size:1.1rem;">Top sản phẩm bán chạy</h2>
+<div class="table-wrap" style="margin-bottom:1.5rem;">
+  <table>
+    <thead><tr><th>Sản phẩm</th><th>Đã bán</th><th>Doanh thu</th></tr></thead>
+    <tbody>{% for p in top_products %}<tr><td>{{ p.TenSanPham }}</td><td>{{ p.sold }}</td><td>{{ format_currency(p.revenue) }}</td></tr>{% else %}<tr><td colspan="3">Chưa có dữ liệu</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+
+<h2 style="font-size:1.1rem;">Đơn hàng theo trạng thái</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Trạng thái</th><th>Số lượng</th></tr></thead>
+    <tbody>{% for s in status_stats %}<tr><td>{{ order_status.get(s.TrangThai, s.TrangThai) }}</td><td>{{ s.cnt }}</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

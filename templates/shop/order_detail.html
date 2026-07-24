@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng #{{ order.MaDonHang }}{% endblock %}
+{% block extra_head %}
+<style>
+  .countdown {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #dc2626;
+    margin: 1rem 0;
+  }
+  .countdown.warning { color: #f59e0b; }
+  .countdown.danger { color: #dc2626; animation: pulse 1s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .qr-payment-card {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    margin: 2rem 0;
+  }
+  .qr-payment-card img {
+    max-width: 300px;
+    margin: 1rem auto;
+    display: block;
+  }
+  .qr-info {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    text-align: left;
+  }
+  .qr-info p {
+    margin: 0.5rem 0;
+    color: #64748b;
+  }
+  .qr-info strong {
+    color: #334155;
+  }
+  .copy-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-left: 8px;
+  }
+  .copy-btn:hover {
+    background: #2563eb;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container" style="padding:2rem 1rem;max-width:800px;">
+  <h1 class="page-title">Đơn hàng #{{ order.MaDonHang }}</h1>
+  <div class="card" style="padding:1.5rem;margin-bottom:1rem;">
+    <p><strong>Trạng thái:</strong> <span class="badge badge-info" id="order-status-label">{{ order_status.get(order.TrangThai, order.TrangThai) }}</span></p>
+    <p><strong>Ngày đặt:</strong> {{ order.NgayDat }}</p>
+    <p><strong>Địa chỉ giao:</strong> {{ order.DiaChiGiao }}</p>
+    <p><strong>Thanh toán:</strong> {{ order.PhuongThucThanhToan }}</p>
+    {% if shipping %}<p><strong>Vận chuyển:</strong> {{ shipping.TenDonVi or 'Chờ phân công' }} — {{ shipping.TrangThai }}</p>{% endif %}
+  </div>
+  
+  {% if qr_url and order.TrangThai == 'pending_payment' %}
+  <div id="qr-payment-block" class="qr-payment-card">
+    <h3 style="color: #16a34a; margin-bottom: 1rem;">Quét mã QR để chuyển khoản</h3>
+    <img src="{{ qr_url }}" alt="QR Chuyển khoản">
+    <div class="qr-info">
+      <p><strong>Ngân hàng:</strong> MB Bank</p>
+      <p><strong>Số tài khoản:</strong> 00931222 <button class="copy-btn" onclick="copyToClipboard('00931222')">Sao chép</button></p>
+      <p><strong>Chủ tài khoản:</strong> HA MINH TRI <button class="copy-btn" onclick="copyToClipboard('HA MINH TRI')">Sao chép</button></p>
+      <p><strong>Số tiền:</strong> {{ format_currency(order.TongTien) }}</p>
+      <p><strong>Nội dung:</strong> DH{{ order.MaDonHang }} <button class="copy-btn" onclick="copyToClipboard('DH{{ order.MaDonHang }}')">Sao chép</button></p>
+    </div>
+    <div style="margin-top: 1.5rem; padding: 1rem; background: white; border-radius: 8px;">
+      <p style="color: #64748b; margin-bottom: 0.5rem;">Thời gian còn lại:</p>
+      <div id="countdown" class="countdown">05:00</div>
+      <p style="color: #dc2626; font-size: 0.9rem;">Sau 5 phút, đơn hàng sẽ tự động chuyển sang CANCELLED</p>
+    </div>
+    <button id="check-payment-btn" class="btn btn-primary" style="margin-top: 1rem;">Tôi đã chuyển khoản</button>
+  </div>
+  {% endif %}
+  
+  <div id="expired-message" style="display:none; background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 2rem; text-align: center; margin: 2rem 0;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">⏰</div>
+    <h2 style="color: #dc2626;">Mã QR đã hết hạn thanh toán</h2>
+    <p style="color: #64748b;">Đơn hàng đã tự động hủy do quá thời gian thanh toán.</p>
+  </div>
+  
+  <div id="paid-success-message" style="display:none; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 2rem; text-align: center; margin: 2rem 0;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+    <h2 style="color: #22c55e;">Thanh toán thành công!</h2>
+    <p style="color: #64748b;">Đơn hàng của bạn đã được xác nhận thanh toán.</p>
+  </div>
+  
+  <div class="table-wrap" style="margin-bottom:1rem;">
+    <table>
+      <thead><tr><th>Sản phẩm</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td><a href="{{ url_for('shop.product_detail', slug=item.Slug) }}">{{ item.TenSanPham }}</a></td>
+          <td>{{ item.SoLuong }}</td>
+          <td>{{ format_currency(item.DonGia) }}</td>
+          <td>{{ format_currency(item.ThanhTien) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:1.2rem;font-weight:800;">Tổng: {{ format_currency(order.TongTien) }}</p>
+
+  {% if order.TrangThai in ['cho_xac_nhan', 'da_xac_nhan'] %}
+  <form method="post" action="{{ url_for('shop.order_cancel', order_id=order.MaDonHang) }}" style="margin-top:1rem;">
+    <button type="submit" class="btn btn-danger" onclick="return confirm('Bạn chắc chắn muốn hủy đơn?')">Hủy đơn hàng</button>
+  </form>
+  {% endif %}
+
+  {% if history %}
+  <h3 style="margin-top:2rem;">Lịch sử trạng thái</h3>
+  <ul>{% for h in history %}<li>{{ h.NgayCapNhat }}: {{ order_status.get(h.TrangThaiMoi, h.TrangThaiMoi) }}{% if h.GhiChu %} — {{ h.GhiChu }}{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    showToast('Đã sao chép', text, 'success');
+  });
+}
+
+const orderId = {{ order.MaDonHang }};
+const expiresAt = {{ (order.HanThanhToan or '')|tojson }};
+const isPending = {{ 'true' if order.TrangThai == 'pending_payment' else 'false' }};
+
+if (isPending && expiresAt) {
+  const countdownEl = document.getElementById("countdown");
+  const qrBlock = document.getElementById("qr-payment-block");
+  const expiredMsg = document.getElementById("expired-message");
+  const paidMsg = document.getElementById("paid-success-message");
+  const statusLabel = document.getElementById("order-status-label");
+  
+  // Countdown timer
+  const countdownInterval = setInterval(function() {
+    const end = new Date(expiresAt.includes("T") ? expiresAt : expiresAt.replace(" ", "T"));
+    const diff = Math.max(0, Math.floor((end - Date.now()) / 1000));
+    const m = Math.floor(diff / 60);
+    const s = diff % 60;
+    
+    if (countdownEl) {
+      countdownEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      if (m < 2) countdownEl.classList.add('danger');
+      else if (m < 5) countdownEl.classList.add('warning');
+    }
+    
+    if (diff === 0) {
+      clearInterval(countdownInterval);
+      if (qrBlock) qrBlock.style.display = 'none';
+      if (expiredMsg) expiredMsg.style.display = 'block';
+      if (statusLabel) statusLabel.textContent = 'Đã hủy (Hết hạn)';
+    }
+  }, 1000);
+  
+  // Polling status
+  const pollInterval = setInterval(async function() {
+    const res = await fetch(`/api/orders/${orderId}/status`);
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    if (data.is_paid) {
+      clearInterval(countdownInterval);
+      clearInterval(pollInterval);
+      if (qrBlock) qrBlock.style.display = 'none';
+      if (paidMsg) paidMsg.style.display = 'block';
+      if (statusLabel) statusLabel.textContent = 'Đã thanh toán (PAID)';
+      showToast('Thanh toán thành công!', 'Đơn hàng #' + orderId + ' đã được thanh toán.', 'success');
+    } else if (data.is_cancelled) {
+      clearInterval(countdownInterval);
+      clearInterval(pollInterval);
+      if (qrBlock) qrBlock.style.display = 'none';
+      if (expiredMsg) expiredMsg.style.display = 'block';
+      if (statusLabel) statusLabel.textContent = 'Đã hủy';
+      showToast('Đơn đã hủy', 'Đơn hàng hết hạn thanh toán.', 'warning');
+    }
+  }, 4000);
+  
+  // Check payment button
+  document.getElementById('check-payment-btn').addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = 'Đang kiểm tra...';
+    const res = await fetch(`/api/orders/${orderId}/status`);
+    const data = await res.json();
+    this.disabled = false;
+    this.textContent = 'Tôi đã chuyển khoản';
+    
+    if (data.is_paid) {
+      clearInterval(countdownInterval);
+      clearInterval(pollInterval);
+      if (qrBlock) qrBlock.style.display = 'none';
+      if (paidMsg) paidMsg.style.display = 'block';
+      if (statusLabel) statusLabel.textContent = 'Đã thanh toán (PAID)';
+      showToast('Thanh toán thành công!', 'Đơn hàng #' + orderId + ' đã được thanh toán.', 'success');
+    } else {
+      showToast('Chưa nhận thanh toán', 'Hệ thống chưa nhận được thanh toán. Vui lòng thử lại sau.', 'warning');
+    }
+  });
+}
+</script>
+{% endblock %}

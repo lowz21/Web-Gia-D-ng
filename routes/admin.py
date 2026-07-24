@@ -1,0 +1,610 @@
+from datetime import date
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from werkzeug.utils import secure_filename
+import os
+from database.db import query_one, query_all, execute, get_db
+from helpers import login_required, slugify, ORDER_STATUS, format_currency, get_effective_price, ROLE_LABELS
+
+# Cấu hình upload hình ảnh
+UPLOAD_FOLDER = 'static/img/products'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+admin_bp = Blueprint("admin", __name__)
+
+
+def get_shop_id():
+    row = query_one(
+        "SELECT MaCuaHang FROM CuaHang WHERE MaNguoiDung = ?",
+        (session["user_id"],),
+    )
+    return row["MaCuaHang"] if row else None
+
+
+@admin_bp.route("/")
+@login_required(roles=["admin", "chu_cua_hang"])
+def dashboard():
+    role = session["user"]["VaiTro"]
+    stats = {}
+
+    if role == "admin":
+        stats = {
+            "users": query_one("SELECT COUNT(*) as c FROM NguoiDung")["c"],
+            "products": query_one("SELECT COUNT(*) as c FROM SanPham")["c"],
+            "orders": query_one("SELECT COUNT(*) as c FROM DonHang")["c"],
+            "revenue": query_one(
+                "SELECT COALESCE(SUM(TongTien), 0) as t FROM DonHang WHERE TrangThai NOT IN ('da_huy', 'cho_xac_nhan')"
+            )["t"],
+        }
+        recent_orders = query_all(
+            """SELECT dh.*, nd.HoTen FROM DonHang dh
+               JOIN NguoiDung nd ON dh.MaKhachHang = nd.MaNguoiDung
+               ORDER BY dh.NgayDat DESC LIMIT 8"""
+        )
+    else:
+        shop_id = get_shop_id()
+        stats = {
+            "products": query_one("SELECT COUNT(*) as c FROM SanPham WHERE MaCuaHang = ?", (shop_id,))["c"],
+            "orders": query_one(
+                """SELECT COUNT(DISTINCT dh.MaDonHang) as c FROM DonHang dh
+                   JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
+                   JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+                   WHERE sp.MaCuaHang = ?""",
+                (shop_id,),
+            )["c"],
+            "revenue": query_one(
+                """SELECT COALESCE(SUM(ct.ThanhTien), 0) as t FROM ChiTietDonHang ct
+                   JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+                   JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
+                   WHERE sp.MaCuaHang = ? AND dh.TrangThai NOT IN ('da_huy')""",
+                (shop_id,),
+            )["t"],
+        }
+        recent_orders = query_all(
+            """SELECT DISTINCT dh.*, nd.HoTen FROM DonHang dh
+               JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
+               JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+               JOIN NguoiDung nd ON dh.MaKhachHang = nd.MaNguoiDung
+               WHERE sp.MaCuaHang = ?
+               ORDER BY dh.NgayDat DESC LIMIT 8""",
+            (shop_id,),
+        )
+
+    return render_template(
+        "admin/dashboard.html",
+        stats=stats,
+        recent_orders=recent_orders,
+        order_status=ORDER_STATUS,
+        format_currency=format_currency,
+    )
+
+
+# --- Danh mục ---
+@admin_bp.route("/danh-muc")
+@login_required(roles=["admin"])
+def categories():
+    cats = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc")
+    return render_template("admin/categories.html", categories=cats)
+
+
+@admin_bp.route("/danh-muc/them", methods=["GET", "POST"])
+@login_required(roles=["admin"])
+def category_add():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        desc = request.form.get("description", "").strip()
+        slug = slugify(name)
+        if not name:
+            flash("Tên danh mục không được để trống.", "warning")
+        else:
+            try:
+                execute("INSERT INTO DanhMuc (TenDanhMuc, Slug, MoTa) VALUES (?, ?, ?)", (name, slug, desc))
+                flash("Thêm danh mục thành công.", "success")
+                return redirect(url_for("admin.categories"))
+            except Exception:
+                flash("Slug đã tồn tại.", "danger")
+    return render_template("admin/category_form.html", category=None)
+
+
+@admin_bp.route("/danh-muc/<int:cat_id>/sua", methods=["GET", "POST"])
+@login_required(roles=["admin"])
+def category_edit(cat_id):
+    cat = query_one("SELECT * FROM DanhMuc WHERE MaDanhMuc = ?", (cat_id,))
+    if not cat:
+        flash("Danh mục không tồn tại.", "danger")
+        return redirect(url_for("admin.categories"))
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        desc = request.form.get("description", "").strip()
+        slug = request.form.get("slug", slugify(name)).strip()
+        execute("UPDATE DanhMuc SET TenDanhMuc=?, Slug=?, MoTa=? WHERE MaDanhMuc=?", (name, slug, desc, cat_id))
+        flash("Cập nhật danh mục thành công.", "success")
+        return redirect(url_for("admin.categories"))
+
+    return render_template("admin/category_form.html", category=cat)
+
+
+@admin_bp.route("/danh-muc/<int:cat_id>/xoa", methods=["POST"])
+@login_required(roles=["admin"])
+def category_delete(cat_id):
+    count = query_one("SELECT COUNT(*) as c FROM SanPham WHERE MaDanhMuc = ?", (cat_id,))["c"]
+    if count:
+        flash("Không thể xóa danh mục đang có sản phẩm.", "danger")
+    else:
+        execute("DELETE FROM DanhMuc WHERE MaDanhMuc = ?", (cat_id,))
+        flash("Đã xóa danh mục.", "success")
+    return redirect(url_for("admin.categories"))
+
+
+# --- Sản phẩm ---
+@admin_bp.route("/san-pham")
+@login_required(roles=["admin", "chu_cua_hang"])
+def products():
+    role = session["user"]["VaiTro"]
+    if role == "admin":
+        items = query_all(
+            """SELECT sp.*, dm.TenDanhMuc, ch.TenCuaHang FROM SanPham sp
+               JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
+               JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+               ORDER BY sp.MaSanPham DESC"""
+        )
+    else:
+        shop_id = get_shop_id()
+        items = query_all(
+            """SELECT sp.*, dm.TenDanhMuc, ch.TenCuaHang FROM SanPham sp
+               JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
+               JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+               WHERE sp.MaCuaHang = ? ORDER BY sp.MaSanPham DESC""",
+            (shop_id,),
+        )
+
+    enriched_items = []
+    for item in items:
+        price, discount = get_effective_price(item)
+        item_dict = dict(item)
+        item_dict["GiaHienTai"] = price
+        item_dict["GiamGia"] = discount
+        enriched_items.append(item_dict)
+    items = enriched_items
+
+    return render_template(
+        "admin/products.html",
+        products=items,
+        format_currency=format_currency,
+        get_effective_price=get_effective_price,
+    )
+
+
+@admin_bp.route("/san-pham/them", methods=["GET", "POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def product_add():
+    cats = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc")
+    shops = query_all("SELECT * FROM CuaHang ORDER BY TenCuaHang")
+    shop_id = get_shop_id()
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        desc = request.form.get("description", "").strip()
+        price = float(request.form.get("price", 0) or 0)
+        orig = float(request.form.get("original_price", 0) or price)
+        stock = int(request.form.get("stock", 0) or 0)
+        cat_id = int(request.form.get("category_id"))
+        store_id = int(request.form.get("shop_id") or shop_id or 0)
+        meta_title = request.form.get("meta_title", name)
+        meta_desc = request.form.get("meta_description", desc)
+        meta_kw = request.form.get("meta_keyword", "")
+        slug = slugify(name)
+        
+        # Xử lý upload hình ảnh
+        image_file = request.files.get('image')
+        image_path = None
+        
+        if image_file and image_file.filename:
+            if not allowed_file(image_file.filename):
+                flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
+            else:
+                # Tạo thư mục upload nếu chưa tồn tại
+                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                # Đổi tên file an toàn
+                filename = secure_filename(f"{slug}_{image_file.filename}")
+                # Lưu file
+                image_path = os.path.join(UPLOAD_FOLDER, filename)
+                image_file.save(image_path)
+                # Chỉ lưu đường dẫn tương đối
+                image_path = f"img/products/{filename}"
+
+        if price <= 0:
+            flash("Giá sản phẩm phải lớn hơn 0.", "warning")
+        elif stock < 0:
+            flash("Tồn kho không được âm.", "warning")
+        elif session["user"]["VaiTro"] == "chu_cua_hang" and store_id != shop_id:
+            flash("Bạn chỉ được thêm sản phẩm cho cửa hàng của mình.", "danger")
+        else:
+            dup = query_one(
+                "SELECT 1 FROM SanPham WHERE TenSanPham = ? AND MaCuaHang = ?",
+                (name, store_id),
+            )
+            if dup:
+                flash("Tên sản phẩm đã tồn tại trong cửa hàng.", "danger")
+            else:
+                pid = execute(
+                    """INSERT INTO SanPham (TenSanPham, MoTa, GiaBan, GiaGoc, SoLuongTon, Slug,
+                       MetaTitle, MetaDescription, MetaKeyword, HinhAnh, MaDanhMuc, MaCuaHang)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (name, desc, price, orig, stock, slug, meta_title, meta_desc, meta_kw, image_path, cat_id, store_id),
+                )
+                execute(
+                    "INSERT INTO LichSuGia (MaSanPham, GiaCu, GiaMoi, GhiChu) VALUES (?, NULL, ?, 'Giá khởi tạo')",
+                    (pid, price),
+                )
+                flash("Thêm sản phẩm thành công.", "success")
+                return redirect(url_for("admin.products"))
+
+    return render_template("admin/product_form.html", product=None, categories=cats, shops=shops, shop_id=shop_id)
+
+
+@admin_bp.route("/san-pham/<int:pid>/sua", methods=["GET", "POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def product_edit(pid):
+    product = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (pid,))
+    if not product:
+        flash("Sản phẩm không tồn tại.", "danger")
+        return redirect(url_for("admin.products"))
+
+    shop_id = get_shop_id()
+    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+        flash("Không có quyền sửa sản phẩm này.", "danger")
+        return redirect(url_for("admin.products"))
+
+    cats = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc")
+    shops = query_all("SELECT * FROM CuaHang ORDER BY TenCuaHang")
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        desc = request.form.get("description", "").strip()
+        price = float(request.form.get("price", 0) or 0)
+        orig = float(request.form.get("original_price", 0) or price)
+        stock = int(request.form.get("stock", 0) or 0)
+        cat_id = int(request.form.get("category_id"))
+        status = request.form.get("status", "hoat_dong")
+        meta_title = request.form.get("meta_title", name)
+        meta_desc = request.form.get("meta_description", desc)
+        meta_kw = request.form.get("meta_keyword", "")
+
+        old_price = float(product["GiaBan"])
+        if price != old_price:
+            execute(
+                "INSERT INTO LichSuGia (MaSanPham, GiaCu, GiaMoi, GhiChu) VALUES (?, ?, ?, 'Cập nhật giá')",
+                (pid, old_price, price),
+            )
+
+        execute(
+            """UPDATE SanPham SET TenSanPham=?, MoTa=?, GiaBan=?, GiaGoc=?, SoLuongTon=?,
+               MetaTitle=?, MetaDescription=?, MetaKeyword=?, TrangThai=?, MaDanhMuc=? WHERE MaSanPham=?""",
+            (name, desc, price, orig, stock, meta_title, meta_desc, meta_kw, status, cat_id, pid),
+        )
+        flash("Cập nhật sản phẩm thành công.", "success")
+        return redirect(url_for("admin.products"))
+
+    price_history = query_all(
+        "SELECT * FROM LichSuGia WHERE MaSanPham = ? ORDER BY NgayThayDoi DESC", (pid,)
+    )
+    return render_template(
+        "admin/product_form.html",
+        product=product,
+        categories=cats,
+        shops=shops,
+        shop_id=shop_id,
+        price_history=price_history,
+        format_currency=format_currency,
+    )
+
+
+@admin_bp.route("/san-pham/<int:pid>/xoa", methods=["POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def product_delete(pid):
+    product = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (pid,))
+    if not product:
+        flash("Sản phẩm không tồn tại.", "danger")
+        return redirect(url_for("admin.products"))
+
+    shop_id = get_shop_id()
+    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+        flash("Không có quyền xóa sản phẩm này.", "danger")
+        return redirect(url_for("admin.products"))
+
+    execute("UPDATE SanPham SET TrangThai = 'ngung_ban' WHERE MaSanPham = ?", (pid,))
+    flash("Đã ngừng bán sản phẩm.", "success")
+    return redirect(url_for("admin.products"))
+
+
+# --- Khuyến mãi ---
+@admin_bp.route("/khuyen-mai")
+@login_required(roles=["admin", "chu_cua_hang"])
+def promotions():
+    promos = query_all(
+        """SELECT km.*, sp.TenSanPham FROM KhuyenMai km
+           LEFT JOIN SanPham sp ON km.MaSanPham = sp.MaSanPham
+           ORDER BY km.MaKhuyenMai DESC"""
+    )
+    return render_template("admin/promotions.html", promotions=promos)
+
+
+@admin_bp.route("/khuyen-mai/them", methods=["GET", "POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def promotion_add():
+    products = query_all("SELECT MaSanPham, TenSanPham FROM SanPham WHERE TrangThai = 'hoat_dong'")
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        percent = int(request.form.get("percent", 0) or 0)
+        start = request.form.get("start_date")
+        end = request.form.get("end_date")
+        product_id = request.form.get("product_id")
+        product_id = int(product_id) if product_id else None
+
+        if not name or percent <= 0 or percent > 100:
+            flash("Dữ liệu khuyến mãi không hợp lệ.", "warning")
+        else:
+            execute(
+                "INSERT INTO KhuyenMai (TenKhuyenMai, PhanTramGiam, NgayBatDau, NgayKetThuc, MaSanPham) VALUES (?, ?, ?, ?, ?)",
+                (name, percent, start, end, product_id),
+            )
+            flash("Thêm khuyến mãi thành công.", "success")
+            return redirect(url_for("admin.promotions"))
+
+    return render_template("admin/promotion_form.html", promotion=None, products=products)
+
+
+@admin_bp.route("/khuyen-mai/<int:promo_id>/xoa", methods=["POST"])
+@login_required(roles=["admin"])
+def promotion_delete(promo_id):
+    execute("DELETE FROM KhuyenMai WHERE MaKhuyenMai = ?", (promo_id,))
+    flash("Đã xóa khuyến mãi.", "success")
+    return redirect(url_for("admin.promotions"))
+
+
+# --- Đơn hàng ---
+@admin_bp.route("/don-hang")
+@login_required(roles=["admin", "chu_cua_hang", "giao_nhan"])
+def orders():
+    role = session["user"]["VaiTro"]
+    status_filter = request.args.get("status", "")
+
+    sql = """SELECT dh.*, nd.HoTen, nd.SoDienThoai FROM DonHang dh
+             JOIN NguoiDung nd ON dh.MaKhachHang = nd.MaNguoiDung WHERE 1=1"""
+    params = []
+
+    if role == "chu_cua_hang":
+        shop_id = get_shop_id()
+        sql += """ AND dh.MaDonHang IN (
+            SELECT ct.MaDonHang FROM ChiTietDonHang ct
+            JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham WHERE sp.MaCuaHang = ?)"""
+        params.append(shop_id)
+
+    if status_filter:
+        sql += " AND dh.TrangThai = ?"
+        params.append(status_filter)
+
+    sql += " ORDER BY dh.NgayDat DESC"
+    orders_list = query_all(sql, params)
+    shippers = query_all("SELECT * FROM DonViGiaoNhan")
+
+    return render_template(
+        "admin/orders.html",
+        orders=orders_list,
+        order_status=ORDER_STATUS,
+        shippers=shippers,
+        format_currency=format_currency,
+        current_status=status_filter,
+    )
+
+
+@admin_bp.route("/don-hang/<int:order_id>")
+@login_required(roles=["admin", "chu_cua_hang", "giao_nhan"])
+def order_detail(order_id):
+    order = query_one(
+        """SELECT dh.*, nd.HoTen, nd.Email, nd.SoDienThoai FROM DonHang dh
+           JOIN NguoiDung nd ON dh.MaKhachHang = nd.MaNguoiDung
+           WHERE dh.MaDonHang = ?""",
+        (order_id,),
+    )
+    if not order:
+        flash("Không tìm thấy đơn hàng.", "danger")
+        return redirect(url_for("admin.orders"))
+
+    items = query_all(
+        """SELECT ct.*, sp.TenSanPham, sp.HinhAnh, ch.TenCuaHang FROM ChiTietDonHang ct
+           JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+           JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+           WHERE ct.MaDonHang = ?""",
+        (order_id,),
+    )
+    history = query_all(
+        "SELECT * FROM LichSuDonHang WHERE MaDonHang = ? ORDER BY NgayCapNhat DESC",
+        (order_id,),
+    )
+    shipping = query_one("SELECT * FROM VanChuyen WHERE MaDonHang = ?", (order_id,))
+    payment = query_one("SELECT * FROM ThanhToan WHERE MaDonHang = ?", (order_id,))
+    shippers = query_all("SELECT * FROM DonViGiaoNhan")
+
+    return render_template(
+        "admin/order_detail.html",
+        order=order,
+        items=items,
+        history=history,
+        shipping=shipping,
+        payment=payment,
+        shippers=shippers,
+        order_status=ORDER_STATUS,
+        format_currency=format_currency,
+    )
+
+
+def update_order_status(order_id, new_status, note=""):
+    order = query_one("SELECT * FROM DonHang WHERE MaDonHang = ?", (order_id,))
+    if not order:
+        return False
+    old = order["TrangThai"]
+    execute("UPDATE DonHang SET TrangThai = ? WHERE MaDonHang = ?", (new_status, order_id))
+    execute(
+        "INSERT INTO LichSuDonHang (MaDonHang, TrangThaiCu, TrangThaiMoi, GhiChu) VALUES (?, ?, ?, ?)",
+        (order_id, old, new_status, note),
+    )
+    execute(
+        "INSERT INTO ThongBao (MaNguoiDung, TieuDe, NoiDung) VALUES (?, ?, ?)",
+        (
+            order["MaKhachHang"],
+            f"Cập nhật đơn hàng #{order_id}",
+            f"Đơn hàng của bạn đã chuyển sang: {ORDER_STATUS.get(new_status, new_status)}",
+        ),
+    )
+    return True
+
+
+@admin_bp.route("/don-hang/<int:order_id>/cap-nhat", methods=["POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def order_update_status(order_id):
+    new_status = request.form.get("status")
+    shipper_id = request.form.get("shipper_id")
+
+    if new_status not in ORDER_STATUS:
+        flash("Trạng thái không hợp lệ.", "danger")
+        return redirect(url_for("admin.order_detail", order_id=order_id))
+
+    if new_status == "dang_giao" and shipper_id:
+        existing = query_one("SELECT * FROM VanChuyen WHERE MaDonHang = ?", (order_id,))
+        if existing:
+            execute(
+                "UPDATE VanChuyen SET MaDonVi=?, TrangThai='dang_giao' WHERE MaDonHang=?",
+                (shipper_id, order_id),
+            )
+        else:
+            execute(
+                "INSERT INTO VanChuyen (MaDonHang, MaDonVi, TrangThai, PhiVanChuyen) VALUES (?, ?, 'dang_giao', 30000)",
+                (order_id, shipper_id),
+            )
+
+    update_order_status(order_id, new_status)
+    flash("Cập nhật trạng thái đơn hàng thành công.", "success")
+    return redirect(url_for("admin.order_detail", order_id=order_id))
+
+
+@admin_bp.route("/don-hang/<int:order_id>/nhan-giao", methods=["POST"])
+@login_required(roles=["giao_nhan", "admin"])
+def order_accept_ship(order_id):
+    shipper = query_one("SELECT MaDonVi FROM DonViGiaoNhan WHERE MaNguoiDung = ?", (session["user_id"],))
+    shipper_id = shipper["MaDonVi"] if shipper else request.form.get("shipper_id")
+
+    existing = query_one("SELECT * FROM VanChuyen WHERE MaDonHang = ? AND MaDonVi IS NOT NULL", (order_id,))
+    if existing and existing["MaDonVi"] != shipper_id:
+        flash("Đơn hàng đã được đơn vị khác tiếp nhận.", "danger")
+        return redirect(url_for("admin.orders"))
+
+    if not query_one("SELECT * FROM VanChuyen WHERE MaDonHang = ?", (order_id,)):
+        execute(
+            "INSERT INTO VanChuyen (MaDonHang, MaDonVi, TrangThai, PhiVanChuyen) VALUES (?, ?, 'dang_giao', 30000)",
+            (order_id, shipper_id),
+        )
+    else:
+        execute("UPDATE VanChuyen SET MaDonVi=?, TrangThai='dang_giao' WHERE MaDonHang=?", (shipper_id, order_id))
+
+    update_order_status(order_id, "dang_giao", "Đơn vị giao nhận đã tiếp nhận")
+    flash("Nhận đơn vận chuyển thành công.", "success")
+    return redirect(url_for("admin.orders"))
+
+
+@admin_bp.route("/don-hang/<int:order_id>/giao-xong", methods=["POST"])
+@login_required(roles=["giao_nhan", "admin"])
+def order_delivered(order_id):
+    execute(
+        "UPDATE VanChuyen SET TrangThai='da_giao', NgayGiaoThucTe=date('now') WHERE MaDonHang=?",
+        (order_id,),
+    )
+    update_order_status(order_id, "da_giao", "Giao hàng thành công")
+    flash("Cập nhật giao hàng thành công.", "success")
+    return redirect(url_for("admin.orders"))
+
+
+# --- Người dùng ---
+@admin_bp.route("/nguoi-dung")
+@login_required(roles=["admin"])
+def users():
+    users_list = query_all("SELECT * FROM NguoiDung ORDER BY MaNguoiDung")
+    return render_template("admin/users.html", users=users_list, role_labels=ROLE_LABELS)
+
+
+@admin_bp.route("/nguoi-dung/<int:uid>/khoa", methods=["POST"])
+@login_required(roles=["admin"])
+def user_toggle(uid):
+    user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (uid,))
+    if user:
+        new_status = "khoa" if user["TrangThai"] == "hoat_dong" else "hoat_dong"
+        execute("UPDATE NguoiDung SET TrangThai = ? WHERE MaNguoiDung = ?", (new_status, uid))
+        flash("Cập nhật trạng thái người dùng thành công.", "success")
+    return redirect(url_for("admin.users"))
+
+
+# --- Thống kê ---
+@admin_bp.route("/thong-ke")
+@login_required(roles=["admin", "chu_cua_hang"])
+def statistics():
+    role = session["user"]["VaiTro"]
+    shop_filter = ""
+    params = []
+    if role == "chu_cua_hang":
+        shop_filter = " AND sp.MaCuaHang = ?"
+        params.append(get_shop_id())
+
+    revenue_by_month = query_all(
+        f"""SELECT strftime('%Y-%m', dh.NgayDat) as thang, SUM(ct.ThanhTien) as doanh_thu
+            FROM ChiTietDonHang ct
+            JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
+            JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+            WHERE dh.TrangThai NOT IN ('da_huy') {shop_filter}
+            GROUP BY thang ORDER BY thang DESC LIMIT 12""",
+        params,
+    )
+
+    top_products = query_all(
+        f"""SELECT sp.TenSanPham, SUM(ct.SoLuong) as sold, SUM(ct.ThanhTien) as revenue
+            FROM ChiTietDonHang ct
+            JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+            JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
+            WHERE dh.TrangThai NOT IN ('da_huy') {shop_filter}
+            GROUP BY sp.MaSanPham ORDER BY sold DESC LIMIT 10""",
+        params,
+    )
+
+    status_stats = query_all(
+        f"""SELECT dh.TrangThai, COUNT(DISTINCT dh.MaDonHang) as cnt
+            FROM DonHang dh
+            JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
+            JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+            WHERE 1=1 {shop_filter}
+            GROUP BY dh.TrangThai""",
+        params,
+    )
+
+    total_revenue = sum(r["doanh_thu"] or 0 for r in revenue_by_month)
+    total_orders = query_one(
+        f"""SELECT COUNT(DISTINCT dh.MaDonHang) as c FROM DonHang dh
+            JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
+            JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+            WHERE dh.TrangThai NOT IN ('da_huy') {shop_filter}""",
+        params,
+    )["c"]
+
+    return render_template(
+        "admin/statistics.html",
+        revenue_by_month=revenue_by_month,
+        top_products=top_products,
+        status_stats=status_stats,
+        total_revenue=total_revenue,
+        total_orders=total_orders,
+        order_status=ORDER_STATUS,
+        format_currency=format_currency,
+    )

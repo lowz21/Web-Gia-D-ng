@@ -1,0 +1,204 @@
+import os
+import sqlite3
+from werkzeug.security import generate_password_hash
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "database", "ecommerce.db")
+SCHEMA_PATH = os.path.join(BASE_DIR, "database", "schema.sql")
+
+# Database URL cho PostgreSQL (Production)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+def get_db():
+    if DATABASE_URL:
+        # Sử dụng PostgreSQL cho production
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        return conn
+    else:
+        # Sử dụng SQLite cho development
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+
+
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    with open(SCHEMA_PATH, encoding="utf-8") as f:
+        schema = f.read()
+
+    conn = get_db()
+    conn.executescript(schema)
+    _migrate_donhang_columns(conn)
+    conn.commit()
+
+    count = conn.execute("SELECT COUNT(*) FROM NguoiDung").fetchone()[0]
+    if count == 0:
+        seed_data(conn)
+    conn.close()
+
+
+def _migrate_donhang_columns(conn):
+    """Thêm cột cho luồng pending_payment trên DB đã tồn tại."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(DonHang)").fetchall()}
+    if "HanThanhToan" not in cols:
+        conn.execute("ALTER TABLE DonHang ADD COLUMN HanThanhToan DATETIME")
+    if "MaTruyCapKhach" not in cols:
+        conn.execute("ALTER TABLE DonHang ADD COLUMN MaTruyCapKhach VARCHAR(64)")
+
+
+def seed_data(conn):
+    users = [
+        ("Quản trị viên", "admin@ecommerce.vn", "admin123", "0901000001", "admin"),
+        ("Nguyễn Văn Bán", "shop@ecommerce.vn", "shop123", "0902000002", "chu_cua_hang"),
+        ("Trần Thị Mua", "customer@ecommerce.vn", "customer123", "0903000003", "khach_hang"),
+        ("Giao Hàng Nhanh", "ship@ecommerce.vn", "ship123", "0904000004", "giao_nhan"),
+        ("Chủ cửa hàng 2", "shop2@ecommerce.vn", "shop123", "0905000005", "chu_cua_hang"),
+    ]
+    
+    for name, email, pwd, phone, role in users:
+        conn.execute(
+            "INSERT INTO NguoiDung (HoTen, Email, MatKhau, SoDienThoai, VaiTro) VALUES (?, ?, ?, ?, ?)",
+            (name, email, generate_password_hash(pwd), phone, role),
+        )
+
+    conn.execute(
+        "INSERT INTO CuaHang (TenCuaHang, DiaChi, MoTa, MaNguoiDung) VALUES (?, ?, ?, ?)",
+        ("Gia Dụng Pro", "123 Nguyễn Huệ, Q1, TP.HCM", "Chuyên đồ gia dụng cao cấp", 2),
+    )
+    conn.execute(
+        "INSERT INTO CuaHang (TenCuaHang, DiaChi, MoTa, MaNguoiDung) VALUES (?, ?, ?, ?)",
+        ("Nhà Xinh Store", "456 Lê Lợi, Q3, TP.HCM", "Đồ gia dụng giá tốt", 5),
+    )
+
+    conn.execute(
+        "INSERT INTO DonViGiaoNhan (TenDonVi, DiaChi, SoDienThoai, Email, MaNguoiDung) VALUES (?, ?, ?, ?, ?)",
+        ("Giao Hàng Nhanh", "789 Võ Văn Tần, Q3, TP.HCM", "19001234", "ship@ecommerce.vn", 4),
+    )
+
+    categories = [
+        ("Nồi & Chảo", "noi-chao", "Nồi, chảo các loại"),
+        ("Bình & Ly", "binh-ly", "Bình nước, ly uống"),
+        ("Dụng cụ nhà bếp", "dung-cu-nha-bep", "Dao, thớt, xẻng..."),
+        ("Đồ dùng phòng tắm", "phong-tam", "Khăn, kệ, phụ kiện"),
+        ("Đồ trang trí", "trang-tri", "Trang trí nhà cửa"),
+        ("Nồi chiên không dầu", "noi-chien-khong-dau", "Nồi chiên không dầu đa năng"),
+        ("Bếp từ", "bep-tu", "Bếp từ hiện đại"),
+        ("Máy hút bụi", "may-hut-bui", "Máy hút bụi gia đình"),
+        ("Quạt hơi nước", "quat-hoi-nuoc", "Quạt hơi nước làm mát"),
+    ]
+    for name, slug, desc in categories:
+        conn.execute(
+            "INSERT INTO DanhMuc (TenDanhMuc, Slug, MoTa) VALUES (?, ?, ?)",
+            (name, slug, desc),
+        )
+
+    products = [
+        # Nồi & Chảo
+        ("Nồi inox 3 đáy Sunhouse", "Nồi inox cao cấp, chống dính, dùng được mọi loại bếp", 450000, 500000, 50, "noi-inox-sunhouse", 1, 1),
+        ("Chảo chống dính Elmich", "Chảo chống dính 28cm, tay cầm chống nóng", 320000, 380000, 80, "chao-chong-dinh-elmich", 1, 1),
+        
+        # Bình & Ly
+        ("Bình giữ nhiệt Lock&Lock 1L", "Giữ nhiệt 12 giờ, inox 304", 280000, 350000, 100, "binh-giu-nhiet-locklock", 2, 1),
+        ("Ly thủy tinh cao cấp 6 cái", "Ly uống nước, thiết kế sang trọng", 89000, 120000, 120, "ly-thuy-tinh-6-cai", 2, 2),
+        
+        # Dụng cụ nhà bếp
+        ("Bộ dao thớt 5 món", "Dao inox, thớt gỗ tre, đủ dụng cụ nhà bếp", 199000, 250000, 60, "bo-dao-thot-5-mon", 3, 1),
+        ("Bộ hộp thủy tinh 5 chiếc", "Hộp đựng thực phẩm, vào lò vi sóng được", 220000, 260000, 70, "bo-hop-thuy-tinh", 3, 1),
+        
+        # Đồ dùng phòng tắm
+        ("Kệ treo nhà tắm inox", "Kệ 2 tầng chống gỉ, lắp không cần khoan", 150000, 180000, 40, "ke-treo-nha-tam", 4, 1),
+        ("Khăn tắm cotton cao cấp", "Khăn bông mềm, thấm hút tốt", 180000, 220000, 90, "khan-tam-cotton", 4, 2),
+        
+        # Đồ trang trí
+        ("Đèn trang trí phòng khách", "Đèn LED trang trí, 3 chế độ sáng", 350000, 420000, 25, "den-trang-tri-phong-khach", 5, 2),
+        
+        # Nồi chiên không dầu
+        ("Nồi chiên không dầu Philips HD9650", "Nồi chiên không dầu 4.2L, công suất 2225W", 2890000, 3200000, 30, "noi-chien-philips-hd9650", 6, 1),
+        ("Nồi chiên không dầu Xiaomi Mi Smart Air Fryer", "Nồi chiên không dầu 3.5L, điều khiển qua app", 1590000, 1800000, 45, "noi-chien-xiaomi-smart", 6, 1),
+        ("Nồi chiên không dầu Sharp KS-72T", "Nồi chiên không dầu 2.4L, giá rẻ", 890000, 1100000, 60, "noi-chien-sharp-ks72t", 6, 2),
+        
+        # Bếp từ
+        ("Bếp từ đôi Sunhouse SHD8606", "Bếp từ đôi, điều khiển cảm ứng", 1290000, 1500000, 25, "bep-tu-doi-sunhouse", 7, 1),
+        ("Bếp từ đơn Midea MI-T21", "Bếp từ đơn, công suất 2000W", 690000, 850000, 40, "bep-tu-don-midea", 7, 1),
+        ("Bếp từ 3 vùng nấu Bosch PPI82560", "Bếp từ 3 vùng, cao cấp", 8900000, 9500000, 15, "bep-tu-3-vung-bosch", 7, 2),
+        
+        # Máy hút bụi
+        ("Máy hút bụi cầm tay Xiaomi Deerma", "Máy hút bụi cầm tay, hút ẩm được", 890000, 1100000, 35, "may-hut-bui-xiaomi-deerma", 8, 1),
+        ("Máy hút bụi robot Ecovacs Deebot N79", "Robot hút bụi tự động", 3500000, 4000000, 20, "robot-hut-bui-ecovacs", 8, 1),
+        ("Máy hút bụi Electrolux ZB3230P", "Máy hút bụi gia đình, công suất 1800W", 2200000, 2600000, 30, "may-hut-bui-electrolux", 8, 2),
+        
+        # Quạt hơi nước
+        ("Quạt hơi nước Sunhouse SHD7720", "Quạt hơi nước 3 chế độ gió", 890000, 1100000, 50, "quat-hoi-nuoc-sunhouse", 9, 1),
+        ("Quạt hơi nước Sharp PJ-A36MY", "Quạt hơi nước ion lọc không khí", 2500000, 2900000, 25, "quat-hoi-nuoc-sharp", 9, 1),
+        ("Quạt hơi nước Kangaroo KG77", "Quạt hơi nước làm mát nhanh", 1200000, 1500000, 40, "quat-hoi-nuoc-kangaroo", 9, 2),
+    ]
+    
+    for name, desc, price, orig, stock, slug, cat, shop in products:
+        conn.execute(
+            """INSERT INTO SanPham (TenSanPham, MoTa, GiaBan, GiaGoc, SoLuongTon, Slug,
+               MetaTitle, MetaDescription, MaDanhMuc, MaCuaHang)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (name, desc, price, orig, stock, slug, name, desc, cat, shop),
+        )
+
+    conn.execute(
+        """INSERT INTO KhuyenMai (TenKhuyenMai, PhanTramGiam, NgayBatDau, NgayKetThuc, MaSanPham)
+           VALUES (?, ?, date('now', '-7 days'), date('now', '+30 days'), NULL)""",
+        ("Khuyến mãi mùa hè", 10),
+    )
+    conn.execute(
+        """INSERT INTO KhuyenMai (TenKhuyenMai, PhanTramGiam, NgayBatDau, NgayKetThuc, MaSanPham)
+           VALUES (?, ?, date('now'), date('now', '+14 days'), ?)""",
+        ("Flash sale nồi chiên Philips", 15, 11),
+    )
+    conn.execute(
+        """INSERT INTO KhuyenMai (TenKhuyenMai, PhanTramGiam, NgayBatDau, NgayKetThuc, MaSanPham)
+           VALUES (?, ?, date('now'), date('now', '+21 days'), ?)""",
+        ("Giảm giá máy hút bụi Xiaomi", 20, 14),
+    )
+
+    # Vouchers
+    conn.execute(
+        """INSERT INTO Voucher (MaVoucher, TenVoucher, LoaiGiam, GiaTriGiam, DonToiThieu, SoLuong, NgayBatDau, NgayKetThuc)
+           VALUES (?, ?, ?, ?, ?, ?, date('now'), date('now', '+30 days'))""",
+        ("GIAM50K", "Giảm 50.000đ cho đơn trên 500k", "tien_mat", 50000, 500000, 100),
+    )
+    conn.execute(
+        """INSERT INTO Voucher (MaVoucher, TenVoucher, LoaiGiam, GiaTriGiam, DonToiThieu, SoLuong, NgayBatDau, NgayKetThuc)
+           VALUES (?, ?, ?, ?, ?, ?, date('now'), date('now', '+30 days'))""",
+        ("GIAM10", "Giảm 10% cho đơn trên 1 triệu", "phan_tram", 10, 1000000, 50),
+    )
+    conn.execute(
+        """INSERT INTO Voucher (MaVoucher, TenVoucher, LoaiGiam, GiaTriGiam, DonToiThieu, SoLuong, NgayBatDau, NgayKetThuc)
+           VALUES (?, ?, ?, ?, ?, ?, date('now'), date('now', '+30 days'))""",
+        ("FREESHIP", "Miễn phí vận chuyển", "tien_mat", 30000, 0, -1),
+    )
+
+    conn.commit()
+
+
+def query_one(sql, params=()):
+    conn = get_db()
+    row = conn.execute(sql, params).fetchone()
+    conn.close()
+    return row
+
+
+def query_all(sql, params=()):
+    conn = get_db()
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return rows
+
+
+def execute(sql, params=()):
+    conn = get_db()
+    cur = conn.execute(sql, params)
+    conn.commit()
+    last_id = cur.lastrowid
+    conn.close()
+    return last_id

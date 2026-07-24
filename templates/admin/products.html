@@ -1,0 +1,30 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+  <h1 class="page-title" style="margin:0;">Quản lý sản phẩm</h1>
+  <a href="{{ url_for('admin.product_add') }}" class="btn btn-primary">+ Thêm sản phẩm</a>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Cửa hàng</th><th>Giá bán</th><th>Giá hiện tại</th><th>Tồn kho</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+      {% for p in products %}
+      {% set price, disc = get_effective_price(p) %}
+      <tr>
+        <td>{{ p.MaSanPham }}</td>
+        <td>{{ p.TenSanPham }}</td>
+        <td>{{ p.TenDanhMuc }}</td>
+        <td>{{ p.TenCuaHang }}</td>
+        <td>{{ format_currency(p.GiaBan) }}</td>
+        <td>{{ format_currency(price) }}{% if disc %} <span class="badge badge-sale">-{{ disc }}%</span>{% endif %}</td>
+        <td>{{ p.SoLuongTon }}</td>
+        <td>{{ p.TrangThai }}</td>
+        <td>
+          <a href="{{ url_for('admin.product_edit', pid=p.MaSanPham) }}" class="btn btn-outline btn-sm">Sửa</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
