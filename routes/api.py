@@ -306,24 +306,55 @@ def mock_payment_success(order_id):
 @api_bp.route("/webhooks/payment", methods=["POST"])
 def payment_webhook():
     """Webhook từ SePay hoặc cổng thanh toán báo đã nhận tiền."""
-    from services.sepay import process_sepay_webhook, verify_sepay_webhook
-    
-    # Xác thực webhook từ SePay
-    if WEBHOOK_SECRET:
-        if request.headers.get("X-Webhook-Secret") != WEBHOOK_SECRET:
-            return jsonify({"error": "unauthorized"}), 401
-
     data = request.get_json(silent=True) or {}
     
-    # Kiểm tra nếu là webhook từ SePay
-    if data.get("gateway") == "sepay" or "transaction_id" in data:
-        if not verify_sepay_webhook(data, data.get("signature")):
-            return jsonify({"error": "invalid_signature"}), 401
+    # Xử lý webhook từ SePay (format mới)
+    if data.get("gateway") or "code" in data or "transferAmount" in data:
+        # Parse order_id từ code hoặc content
+        order_id = None
+        if data.get("code"):
+            # Code có dạng DH1641337 -> tách số
+            code = data.get("code", "")
+            if code.startswith("DH"):
+                try:
+                    order_id = int(code.replace("DH", ""))
+                except (TypeError, ValueError):
+                    pass
         
-        result = process_sepay_webhook(data)
-        return jsonify(result)
+        if not order_id:
+            content = data.get("content") or ""
+            order_id = parse_order_id_from_transfer_content(content)
+        
+        if not order_id:
+            return jsonify({"status": "success", "message": "Webhook received but no order_id found"}), 200
+        
+        try:
+            order_id = int(order_id)
+        except (TypeError, ValueError):
+            return jsonify({"status": "success", "message": "Invalid order_id format"}), 200
+        
+        # Kiểm tra đơn hàng
+        order = query_one("SELECT * FROM DonHang WHERE MaDonHang = ?", (order_id,))
+        if not order:
+            return jsonify({"status": "success", "message": f"Order {order_id} not found"}), 200
+        
+        # Kiểm tra số tiền
+        amount = data.get("transferAmount") or data.get("amount")
+        if amount is not None:
+            try:
+                if abs(float(amount) - float(order["TongTien"])) > 1000:
+                    return jsonify({"status": "success", "message": "Amount mismatch"}), 200
+            except (TypeError, ValueError):
+                pass
+        
+        # Xác nhận thanh toán
+        ok, msg = complete_order_payment(order_id, f"SePay: {data.get('transactionDate')}")
+        if ok:
+            return jsonify({"status": "success", "order_id": order_id, "message": "Payment confirmed"}), 200
+        else:
+            return jsonify({"status": "success", "message": msg}), 200
     
-    # Xử lý webhook từ cổng thanh toán khác
+    # Xử lý webhook từ cổng thanh toán khác (format cũ)
     order_id = data.get("order_id")
     content = data.get("content") or data.get("addInfo") or data.get("description")
     status = (data.get("status") or "success").lower()
@@ -334,19 +365,19 @@ def payment_webhook():
     try:
         order_id = int(order_id)
     except (TypeError, ValueError):
-        return jsonify({"error": "invalid_order_id"}), 400
+        return jsonify({"status": "success", "message": "Invalid order_id"}), 200
 
     if status not in ("success", "paid", "ok"):
-        return jsonify({"error": "ignored_status"}), 400
+        return jsonify({"status": "success", "message": "Ignored status"}), 200
 
     order = query_one("SELECT * FROM DonHang WHERE MaDonHang = ?", (order_id,))
     if not order:
-        return jsonify({"error": "order_not_found"}), 404
+        return jsonify({"status": "success", "message": f"Order {order_id} not found"}), 200
 
     if amount is not None:
         try:
             if abs(float(amount) - float(order["TongTien"])) > 1:
-                return jsonify({"error": "amount_mismatch"}), 400
+                return jsonify({"status": "success", "message": "Amount mismatch"}), 200
         except (TypeError, ValueError):
             pass
 
