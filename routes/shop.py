@@ -23,7 +23,7 @@ def ensure_cart(user_id):
 
 
 @shop_bp.route("/")
-def homepage():
+def index():
     """Homepage - Landing page với banners và featured categories"""
     # Featured categories
     categories = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc LIMIT 8")

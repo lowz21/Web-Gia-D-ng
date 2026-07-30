@@ -181,12 +181,13 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="{{ url_for('shop.index') }}" class="logo">🏠 Gia Dụng <span>Pro</span></a>
-      <form class="search-form" action="{{ url_for('shop.index') }}" method="get">
+      <form class="search-form" action="{{ url_for('shop.shop') }}" method="get">
         <input type="text" name="q" placeholder="Tìm kiếm sản phẩm đồ gia dụng..." value="{{ request.args.get('q', '') }}">
         <button type="submit" class="btn btn-primary">Tìm kiếm</button>
       </form>
       <nav class="nav-links">
         <a href="{{ url_for('shop.index') }}">Trang chủ</a>
+        <a href="{{ url_for('shop.shop') }}">Cửa hàng</a>
         {% if current_user %}
           {% if current_user.VaiTro in ['admin', 'chu_cua_hang'] %}
             <a href="{{ url_for('admin.dashboard') }}">Quản trị</a>

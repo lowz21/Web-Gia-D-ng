@@ -15,7 +15,7 @@
     {% if current_user.VaiTro == 'admin' %}
     <a href="{{ url_for('admin.users') }}" class="{% if 'user' in request.endpoint %}active{% endif %}">Người dùng</a>
     {% endif %}
-    <a href="{{ url_for('shop.index') }}" style="margin-top:1rem;border-top:1px solid #334155;">← Về trang bán hàng</a>
+    <a href="{{ url_for('shop.shop') }}" style="margin-top:1rem;border-top:1px solid #334155;">← Về trang bán hàng</a>
   </aside>
   <div class="admin-content">
     {% block admin_content %}{% endblock %}
