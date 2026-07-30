@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 from database.db import query_one, query_all, execute, get_db
 from helpers import login_required, slugify, ORDER_STATUS, format_currency, get_effective_price, ROLE_LABELS
+from services.cloud_storage import upload_image, delete_image
 
 # Cấu hình upload hình ảnh
 UPLOAD_FOLDER = 'static/img/products'
@@ -633,16 +634,28 @@ def banner_add():
         # Handle image upload
         image_file = request.files.get('image')
         image_path = None
+        public_id = None
         
         if image_file and image_file.filename:
             if not allowed_file(image_file.filename):
                 flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
             else:
-                os.makedirs(BANNER_UPLOAD_FOLDER, exist_ok=True)
-                filename = secure_filename(f"banner_{title}_{image_file.filename}")
-                image_path = os.path.join(BANNER_UPLOAD_FOLDER, filename)
-                image_file.save(image_path)
-                image_path = f"img/banners/{filename}"
+                try:
+                    # Use cloud storage service
+                    upload_result = upload_image(image_file, folder="banners", public_id=f"banner_{title}")
+                    image_path = upload_result['url']
+                    public_id = upload_result['public_id']
+                except Exception as e:
+                    # Fallback to local storage if cloud upload fails or not on Vercel
+                    if os.getenv("VERCEL"):
+                        flash("Cloud storage không khả dụng. Vui lòng cấu hình Cloudinary hoặc Supabase trên Vercel.", "danger")
+                    else:
+                        os.makedirs(BANNER_UPLOAD_FOLDER, exist_ok=True)
+                        filename = secure_filename(f"banner_{title}_{image_file.filename}")
+                        image_path_local = os.path.join(BANNER_UPLOAD_FOLDER, filename)
+                        image_file.save(image_path_local)
+                        image_path = f"img/banners/{filename}"
+                        public_id = f"banners/{filename}"
         
         if not image_path:
             flash("Vui lòng tải lên hình ảnh banner.", "danger")
@@ -681,11 +694,20 @@ def banner_edit(banner_id):
             if not allowed_file(image_file.filename):
                 flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
             else:
-                os.makedirs(BANNER_UPLOAD_FOLDER, exist_ok=True)
-                filename = secure_filename(f"banner_{title}_{image_file.filename}")
-                image_path = os.path.join(BANNER_UPLOAD_FOLDER, filename)
-                image_file.save(image_path)
-                image_path = f"img/banners/{filename}"
+                try:
+                    # Use cloud storage service
+                    upload_result = upload_image(image_file, folder="banners", public_id=f"banner_{title}")
+                    image_path = upload_result['url']
+                except Exception as e:
+                    # Fallback to local storage if cloud upload fails or not on Vercel
+                    if os.getenv("VERCEL"):
+                        flash("Cloud storage không khả dụng. Vui lòng cấu hình Cloudinary hoặc Supabase trên Vercel.", "danger")
+                    else:
+                        os.makedirs(BANNER_UPLOAD_FOLDER, exist_ok=True)
+                        filename = secure_filename(f"banner_{title}_{image_file.filename}")
+                        image_path_local = os.path.join(BANNER_UPLOAD_FOLDER, filename)
+                        image_file.save(image_path_local)
+                        image_path = f"img/banners/{filename}"
         
         execute(
             """UPDATE Banners SET TieuDe = ?, MoTa = ?, URL = ?, Link = ?, TrangThai = ?, ThuTu = ?
@@ -735,14 +757,23 @@ def product_images(product_id):
         image_files = request.files.getlist('images')
         
         if image_files:
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            
             for image_file in image_files:
                 if image_file and image_file.filename and allowed_file(image_file.filename):
-                    filename = secure_filename(f"{product['Slug']}_{image_file.filename}")
-                    image_path = os.path.join(UPLOAD_FOLDER, filename)
-                    image_file.save(image_path)
-                    image_path = f"img/products/{filename}"
+                    try:
+                        # Use cloud storage service
+                        upload_result = upload_image(image_file, folder="products", public_id=f"{product['Slug']}_{image_file.filename}")
+                        image_path = upload_result['url']
+                    except Exception as e:
+                        # Fallback to local storage if cloud upload fails or not on Vercel
+                        if os.getenv("VERCEL"):
+                            flash("Cloud storage không khả dụng. Vui lòng cấu hình Cloudinary hoặc Supabase trên Vercel.", "danger")
+                            return redirect(url_for("admin.product_images", product_id=product_id))
+                        else:
+                            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                            filename = secure_filename(f"{product['Slug']}_{image_file.filename}")
+                            image_path_local = os.path.join(UPLOAD_FOLDER, filename)
+                            image_file.save(image_path_local)
+                            image_path = f"img/products/{filename}"
                     
                     # Check if this is the first image (make it primary)
                     existing_count = query_one(

@@ -7,8 +7,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "21DH114235-Ha-Minh-Tri-ecommerce-2026")
-    app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "static", "uploads")
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    
+    # Only create upload folder locally, not on Vercel (read-only filesystem)
+    if not os.getenv("VERCEL"):
+        app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "static", "uploads")
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    else:
+        # On Vercel, use cloud storage (configured in admin routes)
+        app.config["UPLOAD_FOLDER"] = None
 
     from database.db import init_db
     init_db()

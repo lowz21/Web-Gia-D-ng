@@ -142,6 +142,8 @@ Trả lời:"""
             if reply:
                 return jsonify({"reply": reply})
                 
+        except ImportError:
+            print("google-generativeai package not installed, using fallback")
         except Exception as e:
             print(f"Gemini AI Error: {e}")
             # Fallback về rule-based

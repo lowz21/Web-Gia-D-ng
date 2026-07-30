@@ -6,7 +6,11 @@ import sys
 import os
 
 # Add the parent directory to the path so we can import from the project root
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# Change working directory to project root for proper relative imports
+os.chdir(project_root)
 
 from app import create_app
 

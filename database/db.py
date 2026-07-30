@@ -10,12 +10,34 @@ SCHEMA_PATH = os.path.join(BASE_DIR, "database", "schema.sql")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
+def normalize_database_url(url):
+    """Normalize database URL for psycopg2 compatibility."""
+    if not url:
+        return url
+    
+    # Convert postgres:// to postgresql://
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    
+    # Add sslmode=require for serverless environments (Vercel, Supabase, Neon)
+    if "sslmode" not in url.lower():
+        # Add sslmode parameter
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}sslmode=require"
+    
+    return url
+
+
 def get_db():
     if DATABASE_URL:
         # Sử dụng PostgreSQL cho production
         import psycopg2
         from psycopg2.extras import RealDictCursor
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        
+        # Normalize the database URL
+        normalized_url = normalize_database_url(DATABASE_URL)
+        
+        conn = psycopg2.connect(normalized_url, cursor_factory=RealDictCursor)
         return conn
     else:
         # Sử dụng SQLite cho development
@@ -26,6 +48,12 @@ def get_db():
 
 
 def init_db():
+    # Skip SQLite initialization on Vercel (serverless environment)
+    # Vercel requires external PostgreSQL, not local SQLite
+    if os.getenv("VERCEL"):
+        print("Skipping SQLite initialization on Vercel (requires external PostgreSQL)")
+        return
+    
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         schema = f.read()

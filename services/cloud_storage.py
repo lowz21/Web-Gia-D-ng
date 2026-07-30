@@ -48,6 +48,8 @@ class CloudinaryStorage(CloudStorageService):
                 self._client = cloudinary.uploader
             except ImportError:
                 raise ImportError("cloudinary package not installed. Install with: pip install cloudinary")
+            except Exception as e:
+                raise Exception(f"Failed to initialize Cloudinary: {str(e)}")
         return self._client
     
     def is_configured(self):
@@ -123,6 +125,8 @@ class SupabaseStorage(CloudStorageService):
                 self._client = create_client(self.url, self.key)
             except ImportError:
                 raise ImportError("supabase package not installed. Install with: pip install supabase")
+            except Exception as e:
+                raise Exception(f"Failed to initialize Supabase: {str(e)}")
         return self._client
     
     def is_configured(self):
