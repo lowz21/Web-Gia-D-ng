@@ -82,7 +82,9 @@
                 {% set price, discount = get_effective_price(product) %}
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="card h-100 border-0 shadow-sm">
-                        {% if product.HinhAnh %}
+                        {% if product.PrimaryImageURL %}
+                        <img src="{{ product.PrimaryImageURL }}" class="card-img-top" alt="{{ product.TenSanPham }}" style="height: 200px; object-fit: cover;">
+                        {% elif product.HinhAnh %}
                         <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img-top" alt="{{ product.TenSanPham }}" style="height: 200px; object-fit: cover;">
                         {% else %}
                         <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">

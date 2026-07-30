@@ -35,6 +35,8 @@ def init_db():
     _migrate_donhang_columns(conn)
     _migrate_price_history(conn)
     _migrate_dia_chi_khach_hang(conn)
+    _migrate_product_images(conn)
+    _migrate_banners(conn)
     conn.commit()
 
     count = conn.execute("SELECT COUNT(*) FROM NguoiDung").fetchone()[0]
@@ -98,6 +100,47 @@ def _migrate_dia_chi_khach_hang(conn):
             LaMacDinh INTEGER DEFAULT 0,
             NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
+        )
+    """)
+    conn.commit()
+
+
+def _migrate_product_images(conn):
+    """Create Product_Images table if not exists."""
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "Product_Images" in tables:
+        return
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS Product_Images (
+            MaAnh INTEGER PRIMARY KEY AUTOINCREMENT,
+            MaSanPham INTEGER NOT NULL,
+            URL VARCHAR(500) NOT NULL,
+            LaChinh INTEGER DEFAULT 0,
+            ThuTu INTEGER DEFAULT 0,
+            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham)
+        )
+    """)
+    conn.commit()
+
+
+def _migrate_banners(conn):
+    """Create Banners table if not exists."""
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "Banners" in tables:
+        return
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS Banners (
+            MaBanner INTEGER PRIMARY KEY AUTOINCREMENT,
+            TieuDe VARCHAR(255),
+            MoTa TEXT,
+            URL VARCHAR(500) NOT NULL,
+            Link VARCHAR(500),
+            TrangThai VARCHAR(20) DEFAULT 'hoat_dong',
+            ThuTu INTEGER DEFAULT 0,
+            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()

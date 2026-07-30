@@ -25,15 +25,24 @@ def ensure_cart(user_id):
 @shop_bp.route("/")
 def index():
     """Homepage - Landing page với banners và featured categories"""
+    # Banners for slider
+    banners = query_all(
+        """SELECT * FROM Banners 
+           WHERE TrangThai = 'hoat_dong' 
+           ORDER BY ThuTu ASC"""
+    )
+    
     # Featured categories
     categories = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc LIMIT 8")
     
     # Featured products (sản phẩm nổi bật)
     featured_products = query_all(
-        """SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang
+        """SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang,
+           pi.URL as PrimaryImageURL
            FROM SanPham sp
            JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
            JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+           LEFT JOIN Product_Images pi ON sp.MaSanPham = pi.MaSanPham AND pi.LaChinh = 1
            WHERE sp.TrangThai = 'hoat_dong'
            ORDER BY sp.MaSanPham DESC LIMIT 8"""
     )
@@ -48,6 +57,7 @@ def index():
     
     return render_template(
         "shop/homepage.html",
+        banners=banners,
         categories=categories,
         products=featured_products,
         promos=promos,
@@ -66,10 +76,12 @@ def shop():
     page = max(int(request.args.get("page", 1) or 1), 1)
     per_page = 12
 
-    sql = """SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang
+    sql = """SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang,
+             pi.URL as PrimaryImageURL
              FROM SanPham sp
              JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
              JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+             LEFT JOIN Product_Images pi ON sp.MaSanPham = pi.MaSanPham AND pi.LaChinh = 1
              WHERE sp.TrangThai = 'hoat_dong'"""
     params = []
 
@@ -96,7 +108,7 @@ def shop():
             pass
 
     count_sql = sql.replace(
-        "SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang",
+        "SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL",
         "SELECT COUNT(*) as c",
     )
     total = query_one(count_sql, params)["c"]
@@ -113,7 +125,7 @@ def shop():
     )
 
     return render_template(
-        "shop/index.html",
+        "shop/shop.html",
         products=products,
         categories=categories,
         keyword=keyword,
@@ -179,6 +191,14 @@ def product_detail(slug):
         (product["MaSanPham"],),
     )
 
+    # Product images from gallery
+    product_images = query_all(
+        """SELECT * FROM Product_Images 
+           WHERE MaSanPham = ? 
+           ORDER BY LaChinh DESC, ThuTu ASC""",
+        (product["MaSanPham"],),
+    )
+
     return render_template(
         "shop/product_detail.html",
         product=product,
@@ -189,6 +209,7 @@ def product_detail(slug):
         related=related,
         can_review=can_review,
         price_history=price_history,
+        product_images=product_images,
         format_currency=format_currency,
         get_effective_price=get_effective_price,
     )

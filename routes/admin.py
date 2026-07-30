@@ -7,6 +7,7 @@ from helpers import login_required, slugify, ORDER_STATUS, format_currency, get_
 
 # Cấu hình upload hình ảnh
 UPLOAD_FOLDER = 'static/img/products'
+BANNER_UPLOAD_FOLDER = 'static/img/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
@@ -608,3 +609,226 @@ def statistics():
         order_status=ORDER_STATUS,
         format_currency=format_currency,
     )
+
+
+# --- Banner Management ---
+@admin_bp.route("/banners")
+@login_required(roles=["admin"])
+def banners():
+    banners = query_all(
+        "SELECT * FROM Banners ORDER BY ThuTu ASC"
+    )
+    return render_template("admin/banners.html", banners=banners)
+
+
+@admin_bp.route("/banners/them", methods=["GET", "POST"])
+@login_required(roles=["admin"])
+def banner_add():
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        link = request.form.get("link", "").strip()
+        order = int(request.form.get("order", 0) or 0)
+        
+        # Handle image upload
+        image_file = request.files.get('image')
+        image_path = None
+        
+        if image_file and image_file.filename:
+            if not allowed_file(image_file.filename):
+                flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
+            else:
+                os.makedirs(BANNER_UPLOAD_FOLDER, exist_ok=True)
+                filename = secure_filename(f"banner_{title}_{image_file.filename}")
+                image_path = os.path.join(BANNER_UPLOAD_FOLDER, filename)
+                image_file.save(image_path)
+                image_path = f"img/banners/{filename}"
+        
+        if not image_path:
+            flash("Vui lòng tải lên hình ảnh banner.", "danger")
+        else:
+            execute(
+                """INSERT INTO Banners (TieuDe, MoTa, URL, Link, TrangThai, ThuTu)
+                   VALUES (?, ?, ?, ?, 'hoat_dong', ?)""",
+                (title, description, image_path, link, order)
+            )
+            flash("Đã thêm banner thành công.", "success")
+            return redirect(url_for("admin.banners"))
+    
+    return render_template("admin/banner_form.html", banner=None)
+
+
+@admin_bp.route("/banners/<int:banner_id>/sua", methods=["GET", "POST"])
+@login_required(roles=["admin"])
+def banner_edit(banner_id):
+    banner = query_one("SELECT * FROM Banners WHERE MaBanner = ?", (banner_id,))
+    if not banner:
+        flash("Banner không tồn tại.", "danger")
+        return redirect(url_for("admin.banners"))
+    
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        link = request.form.get("link", "").strip()
+        order = int(request.form.get("order", 0) or 0)
+        status = request.form.get("status", "hoat_dong")
+        
+        # Handle image upload
+        image_file = request.files.get('image')
+        image_path = banner["URL"]
+        
+        if image_file and image_file.filename:
+            if not allowed_file(image_file.filename):
+                flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
+            else:
+                os.makedirs(BANNER_UPLOAD_FOLDER, exist_ok=True)
+                filename = secure_filename(f"banner_{title}_{image_file.filename}")
+                image_path = os.path.join(BANNER_UPLOAD_FOLDER, filename)
+                image_file.save(image_path)
+                image_path = f"img/banners/{filename}"
+        
+        execute(
+            """UPDATE Banners SET TieuDe = ?, MoTa = ?, URL = ?, Link = ?, TrangThai = ?, ThuTu = ?
+               WHERE MaBanner = ?""",
+            (title, description, image_path, link, status, order, banner_id)
+        )
+        flash("Đã cập nhật banner thành công.", "success")
+        return redirect(url_for("admin.banners"))
+    
+    return render_template("admin/banner_form.html", banner=banner)
+
+
+@admin_bp.route("/banners/<int:banner_id>/xoa", methods=["POST"])
+@login_required(roles=["admin"])
+def banner_delete(banner_id):
+    banner = query_one("SELECT * FROM Banners WHERE MaBanner = ?", (banner_id,))
+    if not banner:
+        flash("Banner không tồn tại.", "danger")
+        return redirect(url_for("admin.banners"))
+    
+    execute("DELETE FROM Banners WHERE MaBanner = ?", (banner_id,))
+    flash("Đã xóa banner thành công.", "success")
+    return redirect(url_for("admin.banners"))
+
+
+# --- Product Image Management ---
+@admin_bp.route("/san-pham/<int:product_id>/hinh-anh", methods=["GET", "POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def product_images(product_id):
+    product = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (product_id,))
+    if not product:
+        flash("Sản phẩm không tồn tại.", "danger")
+        return redirect(url_for("admin.products"))
+    
+    shop_id = get_shop_id()
+    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+        flash("Không có quyền quản lý hình ảnh sản phẩm này.", "danger")
+        return redirect(url_for("admin.products"))
+    
+    images = query_all(
+        "SELECT * FROM Product_Images WHERE MaSanPham = ? ORDER BY LaChinh DESC, ThuTu ASC",
+        (product_id,)
+    )
+    
+    if request.method == "POST":
+        # Handle multiple image uploads
+        image_files = request.files.getlist('images')
+        
+        if image_files:
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            
+            for image_file in image_files:
+                if image_file and image_file.filename and allowed_file(image_file.filename):
+                    filename = secure_filename(f"{product['Slug']}_{image_file.filename}")
+                    image_path = os.path.join(UPLOAD_FOLDER, filename)
+                    image_file.save(image_path)
+                    image_path = f"img/products/{filename}"
+                    
+                    # Check if this is the first image (make it primary)
+                    existing_count = query_one(
+                        "SELECT COUNT(*) as c FROM Product_Images WHERE MaSanPham = ?",
+                        (product_id,)
+                    )["c"]
+                    is_primary = 1 if existing_count == 0 else 0
+                    
+                    execute(
+                        """INSERT INTO Product_Images (MaSanPham, URL, LaChinh, ThuTu)
+                           VALUES (?, ?, ?, ?)""",
+                        (product_id, image_path, is_primary, existing_count)
+                    )
+            
+            flash("Đã thêm hình ảnh thành công.", "success")
+            return redirect(url_for("admin.product_images", product_id=product_id))
+        else:
+            flash("Vui lòng chọn ít nhất một hình ảnh.", "warning")
+    
+    return render_template("admin/product_images.html", product=product, images=images)
+
+
+@admin_bp.route("/san-pham/<int:product_id>/hinh-anh/<int:image_id>/mac-dinh", methods=["POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def set_primary_image(product_id, image_id):
+    product = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (product_id,))
+    if not product:
+        flash("Sản phẩm không tồn tại.", "danger")
+        return redirect(url_for("admin.products"))
+    
+    shop_id = get_shop_id()
+    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+        flash("Không có quyền quản lý hình ảnh sản phẩm này.", "danger")
+        return redirect(url_for("admin.products"))
+    
+    conn = get_db()
+    try:
+        # Remove primary flag from all images of this product
+        conn.execute(
+            "UPDATE Product_Images SET LaChinh = 0 WHERE MaSanPham = ?",
+            (product_id,)
+        )
+        # Set primary flag to selected image
+        conn.execute(
+            "UPDATE Product_Images SET LaChinh = 1 WHERE MaAnh = ?",
+            (image_id,)
+        )
+        conn.commit()
+        flash("Đã đặt hình ảnh làm chính.", "success")
+    finally:
+        conn.close()
+    
+    return redirect(url_for("admin.product_images", product_id=product_id))
+
+
+@admin_bp.route("/san-pham/<int:product_id>/hinh-anh/<int:image_id>/xoa", methods=["POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def delete_product_image(product_id, image_id):
+    product = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (product_id,))
+    if not product:
+        flash("Sản phẩm không tồn tại.", "danger")
+        return redirect(url_for("admin.products"))
+    
+    shop_id = get_shop_id()
+    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+        flash("Không có quyền quản lý hình ảnh sản phẩm này.", "danger")
+        return redirect(url_for("admin.products"))
+    
+    image = query_one(
+        "SELECT * FROM Product_Images WHERE MaAnh = ? AND MaSanPham = ?",
+        (image_id, product_id)
+    )
+    
+    if not image:
+        flash("Hình ảnh không tồn tại.", "danger")
+        return redirect(url_for("admin.product_images", product_id=product_id))
+    
+    # If deleting primary image, set another image as primary if available
+    if image["LaChinh"]:
+        remaining = query_one(
+            "SELECT * FROM Product_Images WHERE MaSanPham = ? AND MaAnh != ? LIMIT 1",
+            (product_id, image_id)
+        )
+        if remaining:
+            execute("UPDATE Product_Images SET LaChinh = 1 WHERE MaAnh = ?", (remaining["MaAnh"],))
+    
+    execute("DELETE FROM Product_Images WHERE MaAnh = ?", (image_id,))
+    flash("Đã xóa hình ảnh thành công.", "success")
+    return redirect(url_for("admin.product_images", product_id=product_id))
