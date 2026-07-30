@@ -23,7 +23,7 @@ def get_shop_id():
         "SELECT MaCuaHang FROM CuaHang WHERE MaNguoiDung = ?",
         (session["user_id"],),
     )
-    return row["MaCuaHang"] if row else None
+    return row["MaCuaHang"] if row and "MaCuaHang" in row else None
 
 
 @admin_bp.route("/")
@@ -33,13 +33,17 @@ def dashboard():
     stats = {}
 
     if role == "admin":
+        users_count = query_one("SELECT COUNT(*) as c FROM NguoiDung")
+        products_count = query_one("SELECT COUNT(*) as c FROM SanPham")
+        orders_count = query_one("SELECT COUNT(*) as c FROM DonHang")
+        revenue = query_one(
+            "SELECT COALESCE(SUM(TongTien), 0) as t FROM DonHang WHERE TrangThai NOT IN ('da_huy', 'cho_xac_nhan')"
+        )
         stats = {
-            "users": query_one("SELECT COUNT(*) as c FROM NguoiDung")["c"],
-            "products": query_one("SELECT COUNT(*) as c FROM SanPham")["c"],
-            "orders": query_one("SELECT COUNT(*) as c FROM DonHang")["c"],
-            "revenue": query_one(
-                "SELECT COALESCE(SUM(TongTien), 0) as t FROM DonHang WHERE TrangThai NOT IN ('da_huy', 'cho_xac_nhan')"
-            )["t"],
+            "users": users_count["c"] if users_count else 0,
+            "products": products_count["c"] if products_count else 0,
+            "orders": orders_count["c"] if orders_count else 0,
+            "revenue": revenue["t"] if revenue else 0,
         }
         recent_orders = query_all(
             """SELECT dh.*, nd.HoTen FROM DonHang dh
@@ -48,22 +52,25 @@ def dashboard():
         )
     else:
         shop_id = get_shop_id()
+        products_count = query_one("SELECT COUNT(*) as c FROM SanPham WHERE MaCuaHang = ?", (shop_id,))
+        orders_count = query_one(
+            """SELECT COUNT(DISTINCT dh.MaDonHang) as c FROM DonHang dh
+               JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
+               JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+               WHERE sp.MaCuaHang = ?""",
+            (shop_id,),
+        )
+        revenue = query_one(
+            """SELECT COALESCE(SUM(ct.ThanhTien), 0) as t FROM ChiTietDonHang ct
+               JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
+               JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
+               WHERE sp.MaCuaHang = ? AND dh.TrangThai NOT IN ('da_huy', 'cho_xac_nhan')""",
+            (shop_id,),
+        )
         stats = {
-            "products": query_one("SELECT COUNT(*) as c FROM SanPham WHERE MaCuaHang = ?", (shop_id,))["c"],
-            "orders": query_one(
-                """SELECT COUNT(DISTINCT dh.MaDonHang) as c FROM DonHang dh
-                   JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
-                   JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
-                   WHERE sp.MaCuaHang = ?""",
-                (shop_id,),
-            )["c"],
-            "revenue": query_one(
-                """SELECT COALESCE(SUM(ct.ThanhTien), 0) as t FROM ChiTietDonHang ct
-                   JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
-                   JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
-                   WHERE sp.MaCuaHang = ? AND dh.TrangThai NOT IN ('da_huy')""",
-                (shop_id,),
-            )["t"],
+            "products": products_count["c"] if products_count else 0,
+            "orders": orders_count["c"] if orders_count else 0,
+            "revenue": revenue["t"] if revenue else 0,
         }
         recent_orders = query_all(
             """SELECT DISTINCT dh.*, nd.HoTen FROM DonHang dh
@@ -133,7 +140,8 @@ def category_edit(cat_id):
 @admin_bp.route("/danh-muc/<int:cat_id>/xoa", methods=["POST"])
 @login_required(roles=["admin"])
 def category_delete(cat_id):
-    count = query_one("SELECT COUNT(*) as c FROM SanPham WHERE MaDanhMuc = ?", (cat_id,))["c"]
+    count_result = query_one("SELECT COUNT(*) as c FROM SanPham WHERE MaDanhMuc = ?", (cat_id,))
+    count = count_result["c"] if count_result else 0
     if count:
         flash("Không thể xóa danh mục đang có sản phẩm.", "danger")
     else:
@@ -499,7 +507,7 @@ def order_update_status(order_id):
 @login_required(roles=["giao_nhan", "admin"])
 def order_accept_ship(order_id):
     shipper = query_one("SELECT MaDonVi FROM DonViGiaoNhan WHERE MaNguoiDung = ?", (session["user_id"],))
-    shipper_id = shipper["MaDonVi"] if shipper else request.form.get("shipper_id")
+    shipper_id = shipper["MaDonVi"] if shipper and "MaDonVi" in shipper else request.form.get("shipper_id")
 
     existing = query_one("SELECT * FROM VanChuyen WHERE MaDonHang = ? AND MaDonVi IS NOT NULL", (order_id,))
     if existing and existing["MaDonVi"] != shipper_id:
@@ -592,13 +600,14 @@ def statistics():
     )
 
     total_revenue = sum(r["doanh_thu"] or 0 for r in revenue_by_month)
-    total_orders = query_one(
+    total_orders_result = query_one(
         f"""SELECT COUNT(DISTINCT dh.MaDonHang) as c FROM DonHang dh
             JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
             JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
-            WHERE dh.TrangThai NOT IN ('da_huy') {shop_filter}""",
+            WHERE 1=1 {shop_filter}""",
         params,
-    )["c"]
+    )
+    total_orders = total_orders_result["c"] if total_orders_result else 0
 
     return render_template(
         "admin/statistics.html",
@@ -776,10 +785,11 @@ def product_images(product_id):
                             image_path = f"img/products/{filename}"
                     
                     # Check if this is the first image (make it primary)
-                    existing_count = query_one(
+                    existing_count_result = query_one(
                         "SELECT COUNT(*) as c FROM Product_Images WHERE MaSanPham = ?",
                         (product_id,)
-                    )["c"]
+                    )
+                    existing_count = existing_count_result["c"] if existing_count_result else 0
                     is_primary = 1 if existing_count == 0 else 0
                     
                     execute(

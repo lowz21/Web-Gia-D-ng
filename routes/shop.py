@@ -112,7 +112,7 @@ def shop():
         "SELECT COUNT(*) as c",
     )
     count_result = query_one(count_sql, params)
-    total = count_result["c"] if count_result else 0
+    total = count_result["c"] if count_result and "c" in count_result else 0
 
     sql += " ORDER BY sp.MaSanPham DESC LIMIT ? OFFSET ?"
     params.extend([per_page, (page - 1) * per_page])
@@ -132,6 +132,7 @@ def shop():
         keyword=keyword,
         cat_slug=cat_slug,
         page=page,
+        per_page=per_page,
         total_pages=max(1, (total + per_page - 1) // per_page),
         total=total,
         global_promo=promos[0] if promos else None,
@@ -640,15 +641,6 @@ def checkout():
     )
 
 
-@shop_bp.route("/don-hang-cho-thanh-toan")
-def pending_payment_orders():
-    return render_template(
-        "shop/pending_orders.html",
-        payment_deadline_minutes=PAYMENT_DEADLINE_MINUTES,
-        format_currency=format_currency,
-    )
-
-
 @shop_bp.route("/don-hang-cua-toi")
 @login_required(roles=["khach_hang"])
 def my_orders():
@@ -984,7 +976,7 @@ def sitemap_xml():
 
     base_url = request.host_url.rstrip("/")
     products = query_all(
-        "SELECT Slug, NgayCapNhat FROM SanPham WHERE TrangThai = 'hoat_dong'"
+        "SELECT Slug FROM SanPham WHERE TrangThai = 'hoat_dong'"
     )
     categories = query_all("SELECT Slug FROM DanhMuc")
 
@@ -1009,7 +1001,7 @@ def sitemap_xml():
 
     # Products
     for prod in products:
-        lastmod = prod.get("NgayCapNhat", datetime.date.today().isoformat())
+        lastmod = datetime.date.today().isoformat()  # Use today's date since NgayCapNhat column doesn't exist
         xml += f"""  <url>
     <loc>{base_url}/san-pham/{prod['Slug']}</loc>
     <lastmod>{lastmod}</lastmod>
