@@ -47,6 +47,67 @@ def get_db():
         return conn
 
 
+def adapt_query_for_postgresql(sql, params):
+    """
+    Convert SQLite-style (?) placeholders to PostgreSQL-style (%s) placeholders.
+    This allows the same SQL queries to work on both databases.
+    """
+    if not DATABASE_URL:
+        return sql, params
+    
+    # Convert ? to %s for PostgreSQL
+    # Count the number of placeholders
+    placeholder_count = sql.count('?')
+    
+    if placeholder_count == 0:
+        return sql, params
+    
+    # Replace all ? with %s
+    postgres_sql = sql.replace('?', '%s')
+    
+    return postgres_sql, params
+
+
+def query_one(sql, params=()):
+    """Execute a query and return a single row."""
+    conn = get_db()
+    try:
+        # Adapt query for PostgreSQL if needed
+        adapted_sql, adapted_params = adapt_query_for_postgresql(sql, params)
+        cur = conn.execute(adapted_sql, adapted_params)
+        row = cur.fetchone()
+        return row
+    finally:
+        conn.close()
+
+
+def query_all(sql, params=()):
+    """Execute a query and return all rows."""
+    conn = get_db()
+    try:
+        # Adapt query for PostgreSQL if needed
+        adapted_sql, adapted_params = adapt_query_for_postgresql(sql, params)
+        cur = conn.execute(adapted_sql, adapted_params)
+        rows = cur.fetchall()
+        return rows
+    finally:
+        conn.close()
+
+
+def execute(sql, params=()):
+    """Execute a query and return the last row ID."""
+    conn = get_db()
+    try:
+        # Adapt query for PostgreSQL if needed
+        adapted_sql, adapted_params = adapt_query_for_postgresql(sql, params)
+        cur = conn.execute(adapted_sql, adapted_params)
+        conn.commit()
+        last_id = cur.lastrowid if hasattr(cur, 'lastrowid') else None
+        return last_id
+    finally:
+        conn.close()
+
+
 def init_db():
     # Skip SQLite initialization on Vercel (serverless environment)
     # Vercel requires external PostgreSQL, not local SQLite
@@ -303,26 +364,3 @@ def seed_data(conn):
     )
 
     conn.commit()
-
-
-def query_one(sql, params=()):
-    conn = get_db()
-    row = conn.execute(sql, params).fetchone()
-    conn.close()
-    return row
-
-
-def query_all(sql, params=()):
-    conn = get_db()
-    rows = conn.execute(sql, params).fetchall()
-    conn.close()
-    return rows
-
-
-def execute(sql, params=()):
-    conn = get_db()
-    cur = conn.execute(sql, params)
-    conn.commit()
-    last_id = cur.lastrowid
-    conn.close()
-    return last_id

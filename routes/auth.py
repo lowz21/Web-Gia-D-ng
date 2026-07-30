@@ -34,7 +34,6 @@ def login():
         flash(f"Xin chào {user['HoTen']}!", "success")
         
         # Load default address into session
-        from database.db import query_one
         default_address = query_one(
             "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? AND LaMacDinh = 1",
             (user["MaNguoiDung"],)

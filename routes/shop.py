@@ -111,7 +111,8 @@ def shop():
         "SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL",
         "SELECT COUNT(*) as c",
     )
-    total = query_one(count_sql, params)["c"]
+    count_result = query_one(count_sql, params)
+    total = count_result["c"] if count_result else 0
 
     sql += " ORDER BY sp.MaSanPham DESC LIMIT ? OFFSET ?"
     params.extend([per_page, (page - 1) * per_page])
