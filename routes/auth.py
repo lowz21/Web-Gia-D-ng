@@ -32,6 +32,20 @@ def login():
             "VaiTro": user["VaiTro"],
         }
         flash(f"Xin chào {user['HoTen']}!", "success")
+        
+        # Load default address into session
+        from database.db import query_one
+        default_address = query_one(
+            "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? AND LaMacDinh = 1",
+            (user["MaNguoiDung"],)
+        )
+        if default_address:
+            session["default_address"] = {
+                "id": default_address["MaDiaChi"],
+                "ten_nhan": default_address["TenNguoiNhan"],
+                "sdt": default_address["SoDienThoai"],
+                "dia_chi": default_address["DiaChi"]
+            }
 
         next_url = request.args.get("next")
         if user["VaiTro"] == "admin":

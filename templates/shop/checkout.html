@@ -17,12 +17,30 @@
     </div>
   </div>
   <form method="post" class="card" style="padding:1.5rem;">
-    <div class="form-group">
-      <label>Địa chỉ giao hàng *</label>
-      <textarea class="form-control" name="address" required placeholder="Nhập địa chỉ giao hàng đầy đủ">{{ user.SoDienThoai and '' or '' }}</textarea>
+    <div class="form-group mb-3">
+      <label class="form-label fw-bold">Địa chỉ giao hàng *</label>
+      
+      <!-- Danh sách địa chỉ đã lưu -->
+      <div id="saved-addresses" class="mb-3">
+        <div id="addresses-loading" class="text-muted">Đang tải địa chỉ...</div>
+      </div>
+      
+      <!-- Nút thêm địa chỉ mới -->
+      <button type="button" class="btn btn-outline-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+        + Thêm địa chỉ mới
+      </button>
+      
+      <!-- Input địa chỉ thủ công -->
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="address_type" id="address_manual" value="manual">
+        <label class="form-check-label" for="address_manual">
+          Nhập địa chỉ mới
+        </label>
+      </div>
+      <textarea class="form-control" name="address" id="manual-address" placeholder="Nhập địa chỉ giao hàng đầy đủ" style="display:none;"></textarea>
     </div>
-    <div class="form-group">
-      <label>Phương thức thanh toán</label>
+    <div class="form-group mb-3">
+      <label class="form-label fw-bold">Phương thức thanh toán</label>
       {% for key, label in payment_methods.items() %}
       <label style="display:block;font-weight:400;margin:.3rem 0;">
         <input type="radio" name="payment" value="{{ key }}" {% if key == 'COD' %}checked{% endif %}> {{ label }}
@@ -32,4 +50,139 @@
     <button type="submit" class="btn btn-accent" style="width:100%;">Xác nhận đặt hàng</button>
   </form>
 </div>
+
+<!-- Modal thêm địa chỉ nhanh -->
+<div class="modal fade" id="addAddressModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Thêm địa chỉ mới</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="quick-add-address-form">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="quick_ten_nhan" class="form-label">Tên người nhận</label>
+            <input type="text" class="form-control" id="quick_ten_nhan" name="ten_nhan" placeholder="Nhập tên người nhận">
+          </div>
+          <div class="mb-3">
+            <label for="quick_sdt" class="form-label">Số điện thoại</label>
+            <input type="text" class="form-control" id="quick_sdt" name="sdt" placeholder="Nhập số điện thoại">
+          </div>
+          <div class="mb-3">
+            <label for="quick_dia_chi" class="form-label">Địa chỉ *</label>
+            <textarea class="form-control" id="quick_dia_chi" name="dia_chi" rows="3" required placeholder="Nhập địa chỉ giao hàng"></textarea>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="quick_la_mac_dinh" name="la_mac_dinh">
+            <label class="form-check-label" for="quick_la_mac_dinh">
+              Đặt làm địa chỉ mặc định
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu địa chỉ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load saved addresses
+document.addEventListener('DOMContentLoaded', function() {
+  loadAddresses();
+  
+  // Handle address type change
+  document.querySelectorAll('input[name="address_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const manualInput = document.getElementById('manual-address');
+      if (this.value === 'manual') {
+        manualInput.style.display = 'block';
+        manualInput.required = true;
+      } else {
+        manualInput.style.display = 'none';
+        manualInput.required = false;
+      }
+    });
+  });
+  
+  // Quick add address form
+  document.getElementById('quick-add-address-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    
+    try {
+      const response = await fetch('/dia-chi', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(data)
+      });
+      
+      if (response.ok) {
+        // Close modal and reload addresses
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addAddressModal'));
+        modal.hide();
+        this.reset();
+        loadAddresses();
+        alert('Đã thêm địa chỉ thành công!');
+      } else {
+        alert('Có lỗi xảy ra khi thêm địa chỉ.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Có lỗi xảy ra khi thêm địa chỉ.');
+    }
+  });
+});
+
+async function loadAddresses() {
+  try {
+    const response = await fetch('/api/dia-chi');
+    const data = await response.json();
+    
+    const container = document.getElementById('saved-addresses');
+    
+    if (data.addresses && data.addresses.length > 0) {
+      let html = '';
+      data.addresses.forEach((addr, index) => {
+        const checked = index === 0 ? 'checked' : '';
+        const badge = addr.la_mac_dinh ? '<span class="badge bg-primary ms-2">Mặc định</span>' : '';
+        html += `
+          <div class="form-check mb-2 p-3 border rounded">
+            <input class="form-check-input" type="radio" name="address_type" id="addr_${addr.id}" value="${addr.id}" ${checked}>
+            <label class="form-check-label" for="addr_${addr.id}" style="cursor: pointer;">
+              <strong>${addr.ten_nhan || 'Không có tên'}</strong> ${badge}<br>
+              <small class="text-muted">${addr.sdt || 'Không có SĐT'}</small><br>
+              <small>${addr.dia_chi}</small>
+            </label>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+      
+      // Set first address as selected
+      if (data.addresses.length > 0) {
+        document.getElementById('manual-address').style.display = 'none';
+        document.getElementById('manual-address').required = false;
+      }
+    } else {
+      container.innerHTML = '<p class="text-muted mb-0">Bạn chưa có địa chỉ nào. Vui lòng thêm địa chỉ mới hoặc nhập địa chỉ thủ công.</p>';
+      document.getElementById('address_manual').checked = true;
+      document.getElementById('manual-address').style.display = 'block';
+      document.getElementById('manual-address').required = true;
+    }
+  } catch (error) {
+    console.error('Error loading addresses:', error);
+    document.getElementById('saved-addresses').innerHTML = '<p class="text-danger mb-0">Không thể tải địa chỉ.</p>';
+  }
+}
+</script>
 {% endblock %}

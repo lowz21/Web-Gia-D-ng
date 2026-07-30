@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS SanPham (
     FOREIGN KEY (MaCuaHang) REFERENCES CuaHang(MaCuaHang)
 );
 
+CREATE TABLE IF NOT EXISTS Price_History (
+    MaLichSu INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaSanPham INTEGER NOT NULL,
+    GiaTri DECIMAL(15,2) NOT NULL,
+    Valid_From DATETIME NOT NULL,
+    Valid_To DATETIME,
+    GhiChu VARCHAR(255),
+    FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham)
+);
+
+-- Legacy table for backward compatibility (will be migrated)
 CREATE TABLE IF NOT EXISTS LichSuGia (
     MaLichSu INTEGER PRIMARY KEY AUTOINCREMENT,
     MaSanPham INTEGER NOT NULL,
@@ -185,4 +196,15 @@ CREATE TABLE IF NOT EXISTS Voucher (
     NgayBatDau DATE NOT NULL,
     NgayKetThuc DATE NOT NULL,
     TrangThai VARCHAR(20) DEFAULT 'hoat_dong'
+);
+
+CREATE TABLE IF NOT EXISTS DiaChiKhachHang (
+    MaDiaChi INTEGER PRIMARY KEY AUTOINCREMENT,
+    MaNguoiDung INTEGER NOT NULL,
+    TenNguoiNhan VARCHAR(100),
+    SoDienThoai VARCHAR(15),
+    DiaChi VARCHAR(255) NOT NULL,
+    LaMacDinh INTEGER DEFAULT 0,
+    NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
 );

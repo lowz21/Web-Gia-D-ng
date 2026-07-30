@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Gia Dụng Pro - Đồ gia dụng cao cấp{% endblock %}
+{% block content %}
+<!-- Hero Banner Section -->
+<div class="container-fluid bg-primary text-white py-5 mb-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold">Gia Dụng Pro</h1>
+                <p class="lead">Chuyên cung cấp đồ gia dụng cao cấp, chính hãng</p>
+                <a href="{{ url_for('shop.shop') }}" class="btn btn-light btn-lg mt-3">Mua sắm ngay</a>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="display-6">🏠</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Categories -->
+<div class="container py-5">
+    <h2 class="text-center mb-4">Danh mục nổi bật</h2>
+    <div class="row">
+        {% for cat in categories %}
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card h-100 text-center border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="display-4 mb-3">📦</div>
+                    <h5 class="card-title">{{ cat.TenDanhMuc }}</h5>
+                    <a href="{{ url_for('shop.shop', danh_muc=cat.Slug) }}" class="btn btn-outline-primary btn-sm">Xem sản phẩm</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Featured Products -->
+<div class="container py-5 bg-light">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Sản phẩm nổi bật</h2>
+        <a href="{{ url_for('shop.shop') }}" class="btn btn-primary">Xem tất cả</a>
+    </div>
+    <div class="row">
+        {% for product in products %}
+        {% set price, discount = get_effective_price(product) %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                {% if product.HinhAnh %}
+                <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img-top" alt="{{ product.TenSanPham }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                    <span class="text-white display-6">📦</span>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h6 class="card-title text-truncate">{{ product.TenSanPham }}</h6>
+                    <p class="card-text text-muted small">{{ product.TenCuaHang }}</p>
+                    {% if discount > 0 %}
+                    <p class="card-text">
+                        <span class="text-decoration-line-through text-muted small">{{ format_currency(product.GiaBan) }}</span>
+                        <span class="fw-bold text-danger">{{ format_currency(price) }}</span>
+                        <span class="badge bg-danger">-{{ discount }}%</span>
+                    </p>
+                    {% else %}
+                    <p class="card-text fw-bold text-primary">{{ format_currency(price) }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white border-0">
+                    <a href="{{ url_for('shop.product_detail', slug=product.Slug) }}" class="btn btn-primary btn-sm w-100">Xem chi tiết</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Promotions -->
+{% if promos %}
+<div class="container py-5">
+    <h2 class="text-center mb-4">Khuyến mãi đặc biệt</h2>
+    <div class="row">
+        {% for promo in promos %}
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white">
+                    <h4 class="card-title">{{ promo.TenKhuyenMai }}</h4>
+                    <p class="card-text">Giảm {{ promo.PhanTramGiam }}% cho các sản phẩm</p>
+                    <p class="card-text small">
+                        Từ {{ promo.NgayBatDau }} đến {{ promo.NgayKetThuc }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Features -->
+<div class="container py-5 bg-light">
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="display-4 mb-3">🚚</div>
+            <h5>Giao hàng nhanh</h5>
+            <p class="text-muted">Miễn phí vận chuyển cho đơn hàng trên 500k</p>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="display-4 mb-3">💯</div>
+            <h5>Chính hãng 100%</h5>
+            <p class="text-muted">Cam kết sản phẩm chính hãng, chất lượng</p>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="display-4 mb-3">🔄</div>
+            <h5>Đổi trả dễ dàng</h5>
+            <p class="text-muted">Đổi trả trong vòng 7 ngày nếu có lỗi</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

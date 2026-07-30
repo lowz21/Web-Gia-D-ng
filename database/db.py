@@ -33,6 +33,8 @@ def init_db():
     conn = get_db()
     conn.executescript(schema)
     _migrate_donhang_columns(conn)
+    _migrate_price_history(conn)
+    _migrate_dia_chi_khach_hang(conn)
     conn.commit()
 
     count = conn.execute("SELECT COUNT(*) FROM NguoiDung").fetchone()[0]
@@ -48,6 +50,57 @@ def _migrate_donhang_columns(conn):
         conn.execute("ALTER TABLE DonHang ADD COLUMN HanThanhToan DATETIME")
     if "MaTruyCapKhach" not in cols:
         conn.execute("ALTER TABLE DonHang ADD COLUMN MaTruyCapKhach VARCHAR(64)")
+
+
+def _migrate_price_history(conn):
+    """Migrate LichSuGia to Price_History with valid_from/valid_to."""
+    # Check if Price_History table exists
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "Price_History" not in tables:
+        return
+    
+    # Check if migration already done
+    if conn.execute("SELECT COUNT(*) FROM Price_History").fetchone()[0] > 0:
+        return
+    
+    # Migrate data from LichSuGia to Price_History
+    old_records = conn.execute("SELECT * FROM LichSuGia ORDER BY NgayThayDoi").fetchall()
+    
+    for record in old_records:
+        ma_sp = record[1]
+        gia_moi = record[3]
+        ngay_thay_doi = record[4]
+        ghi_chu = record[5]
+        
+        # Insert into Price_History
+        conn.execute(
+            """INSERT INTO Price_History (MaSanPham, GiaTri, Valid_From, Valid_To, GhiChu)
+               VALUES (?, ?, ?, ?, ?)""",
+            (ma_sp, gia_moi, ngay_thay_doi, None, ghi_chu or "Migrated from LichSuGia")
+        )
+    
+    conn.commit()
+
+
+def _migrate_dia_chi_khach_hang(conn):
+    """Create DiaChiKhachHang table if not exists."""
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "DiaChiKhachHang" in tables:
+        return
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS DiaChiKhachHang (
+            MaDiaChi INTEGER PRIMARY KEY AUTOINCREMENT,
+            MaNguoiDung INTEGER NOT NULL,
+            TenNguoiNhan VARCHAR(100),
+            SoDienThoai VARCHAR(15),
+            DiaChi VARCHAR(255) NOT NULL,
+            LaMacDinh INTEGER DEFAULT 0,
+            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
+        )
+    """)
+    conn.commit()
 
 
 def seed_data(conn):

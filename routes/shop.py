@@ -23,7 +23,42 @@ def ensure_cart(user_id):
 
 
 @shop_bp.route("/")
-def index():
+def homepage():
+    """Homepage - Landing page với banners và featured categories"""
+    # Featured categories
+    categories = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc LIMIT 8")
+    
+    # Featured products (sản phẩm nổi bật)
+    featured_products = query_all(
+        """SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang
+           FROM SanPham sp
+           JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
+           JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+           WHERE sp.TrangThai = 'hoat_dong'
+           ORDER BY sp.MaSanPham DESC LIMIT 8"""
+    )
+    
+    # Promotions
+    promos = query_all(
+        """SELECT * FROM KhuyenMai 
+           WHERE TrangThai = 'hoat_dong' 
+           AND date(NgayBatDau) <= date('now') AND date(NgayKetThuc) >= date('now')
+           ORDER BY PhanTramGiam DESC LIMIT 4"""
+    )
+    
+    return render_template(
+        "shop/homepage.html",
+        categories=categories,
+        products=featured_products,
+        promos=promos,
+        format_currency=format_currency,
+        get_effective_price=get_effective_price,
+    )
+
+
+@shop_bp.route("/san-pham")
+def shop():
+    """Shop page - Product listings với filters và pagination"""
     keyword = request.args.get("q", "").strip()
     cat_slug = request.args.get("danh-muc", "")
     min_price = request.args.get("min-gia", "").strip()
@@ -414,12 +449,36 @@ def checkout():
     user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (session["user_id"],))
 
     if request.method == "POST":
-        address = request.form.get("address", "").strip()
+        address_type = request.form.get("address_type", "manual")
         payment = request.form.get("payment", "COD")
         voucher_code = request.form.get("voucher", "").strip().upper()
+        
+        # Xử lý địa chỉ
+        address = ""
+        if address_type == "manual":
+            address = request.form.get("address", "").strip()
+        else:
+            # Lấy địa chỉ từ database
+            try:
+                address_id = int(address_type)
+                saved_address = query_one(
+                    "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
+                    (address_id, session["user_id"])
+                )
+                if saved_address:
+                    # Format địa chỉ
+                    parts = []
+                    if saved_address["TenNguoiNhan"]:
+                        parts.append(saved_address["TenNguoiNhan"])
+                    if saved_address["SoDienThoai"]:
+                        parts.append(saved_address["SoDienThoai"])
+                    parts.append(saved_address["DiaChi"])
+                    address = " | ".join(parts)
+            except (ValueError, TypeError):
+                address = request.form.get("address", "").strip()
 
         if not address:
-            flash("Vui lòng nhập địa chỉ giao hàng.", "warning")
+            flash("Vui lòng nhập hoặc chọn địa chỉ giao hàng.", "warning")
             return render_template(
                 "shop/checkout.html",
                 items=items,

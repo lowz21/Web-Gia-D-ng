@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Cửa hàng - Gia Dụng Pro{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Bộ lọc</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('shop.shop') }}">
+                        <!-- Search -->
+                        <div class="mb-3">
+                            <label class="form-label">Tìm kiếm</label>
+                            <input type="text" name="q" class="form-control" value="{{ keyword }}" placeholder="Nhập tên sản phẩm...">
+                        </div>
+                        
+                        <!-- Categories -->
+                        <div class="mb-3">
+                            <label class="form-label">Danh mục</label>
+                            <select name="danh-muc" class="form-select">
+                                <option value="">Tất cả</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.Slug }}" {% if cat_slug == cat.Slug %}selected{% endif %}>
+                                    {{ cat.TenDanhMuc }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Price Range -->
+                        <div class="mb-3">
+                            <label class="form-label">Khoảng giá</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" name="min-gia" class="form-control" placeholder="Từ" value="{{ min_price }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" name="max-gia" class="form-control" placeholder="Đến" value="{{ max_price }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Áp dụng</button>
+                        <a href="{{ url_for('shop.shop') }}" class="btn btn-outline-secondary w-100 mt-2">Đặt lại</a>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Promotion Banner -->
+            {% if promos %}
+            <div class="card mt-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white">
+                    <h6 class="card-title">{{ promos[0].TenKhuyenMai }}</h6>
+                    <p class="card-text small">Giảm {{ promos[0].PhanTramGiam }}% cho toàn bộ đơn hàng</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Product Grid -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Sản phẩm ({{ total }})</h4>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Sắp xếp
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price) }}">Mới nhất</a></li>
+                        <li><a class="dropdown-item" href="#">Giá thấp đến cao</a></li>
+                        <li><a class="dropdown-item" href="#">Giá cao đến thấp</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            {% if products %}
+            <div class="row">
+                {% for product in products %}
+                {% set price, discount = get_effective_price(product) %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        {% if product.HinhAnh %}
+                        <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img-top" alt="{{ product.TenSanPham }}" style="height: 200px; object-fit: cover;">
+                        {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                            <span class="text-white display-6">📦</span>
+                        </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h6 class="card-title text-truncate">{{ product.TenSanPham }}</h6>
+                            <p class="card-text text-muted small">{{ product.TenCuaHang }}</p>
+                            {% if discount > 0 %}
+                            <p class="card-text">
+                                <span class="text-decoration-line-through text-muted small">{{ format_currency(product.GiaBan) }}</span>
+                                <span class="fw-bold text-danger">{{ format_currency(price) }}</span>
+                                <span class="badge bg-danger">-{{ discount }}%</span>
+                            </p>
+                            {% else %}
+                            <p class="card-text fw-bold text-primary">{{ format_currency(price) }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-white border-0">
+                            <a href="{{ url_for('shop.product_detail', slug=product.Slug) }}" class="btn btn-primary btn-sm w-100">Xem chi tiết</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if total > per_page %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, page=page-1) }}">Trước</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% set total_pages = (total + per_page - 1) // per_page %}
+                    {% for p in range(1, total_pages + 1) %}
+                        {% if p == page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ p }}</span>
+                        </li>
+                        {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, page=p) }}">{{ p }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, page=page+1) }}">Tiếp</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <div class="display-4 mb-3">🔍</div>
+                <p class="text-muted">Không tìm thấy sản phẩm nào.</p>
+                <a href="{{ url_for('shop.shop') }}" class="btn btn-primary">Xem tất cả sản phẩm</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -9,9 +9,10 @@ ORDER_STATUS = {
     "cancelled": "Đã hủy — hết hạn (CANCELLED)",
     "cho_xac_nhan": "Chờ xác nhận",
     "da_xac_nhan": "Đã xác nhận",
-    "dang_xu_ly": "Đang xử lý",
-    "dang_giao": "Đang giao",
-    "da_giao": "Đã giao",
+    "dang_xu_ly": "Đang xử lý (PROCESSING)",
+    "dang_chuan_bi": "Đang chuẩn bị (PREPARING)",
+    "dang_giao": "Đang giao (SHIPPING)",
+    "da_giao": "Đã giao (DELIVERED)",
     "da_huy": "Đã hủy",
     "cho_thanh_toan": "Chờ thanh toán",
     "da_thanh_toan": "Đã thanh toán",
@@ -50,6 +51,22 @@ def login_required(roles=None):
             return f(*args, **kwargs)
         return wrapped
     return decorator
+
+
+def vendor_required(f):
+    """Decorator to ensure vendor can only access their own store data."""
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        if not session.get("user_id"):
+            flash("Vui lòng đăng nhập để tiếp tục.", "warning")
+            return redirect(url_for("auth.login", next=request.url))
+        
+        if session.get("user", {}).get("VaiTro") != "chu_cua_hang":
+            flash("Chỉ chủ cửa hàng mới có quyền truy cập.", "danger")
+            return redirect(url_for("shop.index"))
+        
+        return f(*args, **kwargs)
+    return wrapped
 
 
 def format_currency(value):
