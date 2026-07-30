@@ -2,15 +2,16 @@
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
   --accent: #f97316;
-  --bg: #f8fafc;
+  --bg: #f4f6f8;
   --text: #1e293b;
   --muted: #64748b;
-  --border: #e2e8f0;
+  --border: #e5e7eb;
   --success: #16a34a;
   --danger: #dc2626;
   --warning: #ca8a04;
-  --radius: 12px;
-  --shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -138,17 +139,22 @@ a:hover { color: var(--primary-dark); }
 
 /* Cards & Grid */
 .grid { display: grid; gap: 1.25rem; }
-.grid-4 { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 .card {
-  background: #fff;
+  background: #ffffff;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow: hidden;
   box-shadow: var(--shadow);
-  transition: transform .2s, box-shadow .2s;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
-.card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(15,23,42,.12); }
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+}
 .card-img {
   height: 180px;
   background: linear-gradient(145deg, #eff6ff, #dbeafe);
@@ -156,11 +162,28 @@ a:hover { color: var(--primary-dark); }
   align-items: center;
   justify-content: center;
   font-size: 3.5rem;
+  flex-shrink: 0;
 }
-.card-body { padding: 1rem; }
+.card-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; }
 .card-title { font-weight: 700; margin: 0 0 .4rem; font-size: 1rem; }
 .price { color: var(--danger); font-weight: 800; font-size: 1.1rem; }
 .price-old { color: var(--muted); text-decoration: line-through; font-size: .9rem; margin-left: .4rem; }
+
+/* Product Grid Layout */
+.product-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 1024px) {
+  .product-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+}
 .badge {
   display: inline-block;
   padding: .2rem .55rem;

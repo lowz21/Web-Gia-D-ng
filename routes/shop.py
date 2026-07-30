@@ -70,28 +70,29 @@ def index():
 def shop():
     """Shop page - Product listings với filters và pagination"""
     keyword = request.args.get("q", "").strip()
-    cat_slug = request.args.get("danh-muc", "")
-    min_price = request.args.get("min-gia", "").strip()
-    max_price = request.args.get("max-gia", "").strip()
-    page = max(int(request.args.get("page", 1) or 1), 1)
+    category_slug = request.args.get("danh_muc", "").strip()
+    min_price = request.args.get("min_price")
+    max_price = request.args.get("max_price")
+    sort_by = request.args.get("sort", "newest")  # newest, price_asc, price_desc
+    page = int(request.args.get("page", 1))
     per_page = 12
 
-    sql = """SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang,
-             pi.URL as PrimaryImageURL
-             FROM SanPham sp
-             JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
-             JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
-             LEFT JOIN Product_Images pi ON sp.MaSanPham = pi.MaSanPham AND pi.LaChinh = 1
-             WHERE sp.TrangThai = 'hoat_dong'"""
+    sql = """
+        SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL
+        FROM SanPham sp
+        JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
+        JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
+        LEFT JOIN Product_Images pi ON sp.MaSanPham = pi.MaSanPham AND pi.LaChinh = 1
+        WHERE sp.TrangThai = 'hoat_dong'"""
     params = []
 
     if keyword:
         sql += " AND (sp.TenSanPham LIKE ? OR sp.MoTa LIKE ? OR sp.MetaKeyword LIKE ?)"
         like = f"%{keyword}%"
         params.extend([like, like, like])
-    if cat_slug:
+    if category_slug:
         sql += " AND dm.Slug = ?"
-        params.append(cat_slug)
+        params.append(category_slug)
     if min_price:
         try:
             min_price_val = float(min_price)
@@ -107,14 +108,26 @@ def shop():
         except ValueError:
             pass
 
+    # Sorting
+    if sort_by == "price_asc":
+        sql += " ORDER BY sp.GiaBan ASC"
+    elif sort_by == "price_desc":
+        sql += " ORDER BY sp.GiaBan DESC"
+    else:  # newest
+        sql += " ORDER BY sp.MaSanPham DESC"
+
     count_sql = sql.replace(
         "SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL",
         "SELECT COUNT(*) as c",
     )
+    # Remove ORDER BY clause from count query
+    if "ORDER BY" in count_sql:
+        count_sql = count_sql[:count_sql.index("ORDER BY")]
+    
     count_result = query_one(count_sql, params)
     total = count_result["c"] if count_result and "c" in count_result else 0
 
-    sql += " ORDER BY sp.MaSanPham DESC LIMIT ? OFFSET ?"
+    sql += " LIMIT ? OFFSET ?"
     params.extend([per_page, (page - 1) * per_page])
     products = query_all(sql, params)
 
@@ -607,16 +620,25 @@ def checkout():
                 "INSERT INTO LichSuDonHang (MaDonHang, TrangThaiCu, TrangThaiMoi, GhiChu) VALUES (?, NULL, ?, 'Tạo đơn hàng')",
                 (order_id, initial_status if is_qr else "cho_xac_nhan"),
             )
-            conn.execute(
-                "INSERT INTO ThongBao (MaNguoiDung, TieuDe, NoiDung) VALUES (?, ?, ?)",
-                (
-                    session["user_id"],
-                    "Đặt hàng thành công" if not is_qr else "Đơn chờ thanh toán QR",
-                    f"Đơn hàng #{order_id} {'đang chờ quét QR trong ' + str(PAYMENT_DEADLINE_MINUTES) + ' phút.' if is_qr else 'đã được tạo.'}",
-                ),
-            )
+            # Wrap notification in try-except to prevent checkout failure
+            try:
+                conn.execute(
+                    "INSERT INTO ThongBao (MaNguoiDung, TieuDe, NoiDung) VALUES (?, ?, ?)",
+                    (
+                        session["user_id"],
+                        "Đặt hàng thành công" if not is_qr else "Đơn chờ thanh toán QR",
+                        f"Đơn hàng #{order_id} {'đang chờ quét QR trong ' + str(PAYMENT_DEADLINE_MINUTES) + ' phút.' if is_qr else 'đã được tạo.'}",
+                    ),
+                )
+            except Exception as e:
+                # Log error but don't fail checkout
+                pass
             conn.execute("DELETE FROM ChiTietGioHang WHERE MaGioHang = ?", (cart_row["MaGioHang"],))
             conn.commit()
+        except Exception as e:
+            conn.rollback()
+            flash(f"Có lỗi xảy ra khi đặt hàng: {str(e)}", "danger")
+            return redirect(url_for("shop.cart"))
         finally:
             conn.close()
 
@@ -627,6 +649,10 @@ def checkout():
             )
         else:
             flash("Đặt hàng thành công!", "success")
+        
+        # Clear cart session
+        session.pop("cart", None)
+        
         return redirect(url_for("shop.order_confirmation", order_id=order_id))
 
     total = sum(get_effective_price(i)[0] * i["SoLuong"] for i in items)
@@ -755,8 +781,8 @@ def order_confirmation(order_id):
                 vn_tz = timezone(timedelta(hours=7))
                 dt = dt.replace(tzinfo=vn_tz)
                 expires_at = dt.isoformat()
-            except ValueError:
-                expires_at = order["HanThanhToan"].replace(" ", "T")
+            except (ValueError, TypeError, Exception):
+                expires_at = order["HanThanhToan"].replace(" ", "T") if order["HanThanhToan"] else None
 
     return render_template(
         "shop/order_confirmation.html",

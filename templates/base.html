@@ -187,7 +187,7 @@
       </form>
       <nav class="nav-links">
         <a href="{{ url_for('shop.index') }}">Trang chủ</a>
-        <a href="{{ url_for('shop.shop') }}">Cửa hàng</a>
+        <a href="{{ url_for('shop.shop') }}">Sản phẩm</a>
         {% if current_user %}
           {% if current_user.VaiTro in ['admin', 'chu_cua_hang'] %}
             <a href="{{ url_for('admin.dashboard') }}">Quản trị</a>

@@ -25,12 +25,16 @@ def new_guest_access_token():
 
 
 def build_vietqr_url(order_id, amount):
-    amount_int = int(float(amount))
-    add_info = f"DH{order_id}"
-    return (
-        f"https://img.vietqr.io/image/{VIETQR_BANK_CODE}-{VIETQR_ACCOUNT_NO}-compact2.png"
-        f"?amount={amount_int}&addInfo={add_info}&accountName={VIETQR_ACCOUNT_NAME.replace(' ', '%20')}"
-    )
+    try:
+        amount_int = int(float(amount))
+        add_info = f"DH{order_id}"
+        return (
+            f"https://img.vietqr.io/image/{VIETQR_BANK_CODE}-{VIETQR_ACCOUNT_NO}-compact2.png"
+            f"?amount={amount_int}&addInfo={add_info}&accountName={VIETQR_ACCOUNT_NAME.replace(' ', '%20')}"
+        )
+    except (ValueError, TypeError, Exception) as e:
+        # Fallback if VietQR generation fails
+        return None
 
 
 def parse_order_id_from_transfer_content(content):

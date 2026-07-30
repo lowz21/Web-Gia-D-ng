@@ -69,44 +69,40 @@
                         Sắp xếp
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price) }}">Mới nhất</a></li>
-                        <li><a class="dropdown-item" href="#">Giá thấp đến cao</a></li>
-                        <li><a class="dropdown-item" href="#">Giá cao đến thấp</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort='newest') }}">Mới nhất</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort='price_asc') }}">Giá thấp đến cao</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort='price_desc') }}">Giá cao đến thấp</a></li>
                     </ul>
                 </div>
             </div>
             
             {% if products %}
-            <div class="row">
+            <div class="product-grid">
                 {% for product in products %}
                 {% set price, discount = get_effective_price(product) %}
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <div class="card h-100 border-0 shadow-sm">
-                        {% if product.PrimaryImageURL %}
-                        <img src="{{ product.PrimaryImageURL }}" class="card-img-top" alt="{{ product.TenSanPham }}" style="height: 200px; object-fit: cover;">
-                        {% elif product.HinhAnh %}
-                        <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img-top" alt="{{ product.TenSanPham }}" style="height: 200px; object-fit: cover;">
+                <div class="card">
+                    {% if product.PrimaryImageURL %}
+                    <img src="{{ product.PrimaryImageURL }}" class="card-img" alt="{{ product.TenSanPham }}">
+                    {% elif product.HinhAnh %}
+                    <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img" alt="{{ product.TenSanPham }}">
+                    {% else %}
+                    <div class="card-img">
+                        <span class="display-6">📦</span>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h6 class="card-title text-truncate">{{ product.TenSanPham }}</h6>
+                        <p class="text-muted small">{{ product.TenCuaHang }}</p>
+                        {% if discount > 0 %}
+                        <p class="mb-2">
+                            <span class="price-old">{{ format_currency(product.GiaBan) }}</span>
+                            <span class="price">{{ format_currency(price) }}</span>
+                            <span class="badge badge-sale">-{{ discount }}%</span>
+                        </p>
                         {% else %}
-                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
-                            <span class="text-white display-6">📦</span>
-                        </div>
+                        <p class="price mb-2">{{ format_currency(price) }}</p>
                         {% endif %}
-                        <div class="card-body">
-                            <h6 class="card-title text-truncate">{{ product.TenSanPham }}</h6>
-                            <p class="card-text text-muted small">{{ product.TenCuaHang }}</p>
-                            {% if discount > 0 %}
-                            <p class="card-text">
-                                <span class="text-decoration-line-through text-muted small">{{ format_currency(product.GiaBan) }}</span>
-                                <span class="fw-bold text-danger">{{ format_currency(price) }}</span>
-                                <span class="badge bg-danger">-{{ discount }}%</span>
-                            </p>
-                            {% else %}
-                            <p class="card-text fw-bold text-primary">{{ format_currency(price) }}</p>
-                            {% endif %}
-                        </div>
-                        <div class="card-footer bg-white border-0">
-                            <a href="{{ url_for('shop.product_detail', slug=product.Slug) }}" class="btn btn-primary btn-sm w-100">Xem chi tiết</a>
-                        </div>
+                        <a href="{{ url_for('shop.product_detail', slug=product.Slug) }}" class="btn btn-primary btn-sm w-100 mt-auto">Xem chi tiết</a>
                     </div>
                 </div>
                 {% endfor %}
@@ -118,7 +114,7 @@
                 <ul class="pagination justify-content-center">
                     {% if page > 1 %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, page=page-1) }}">Trước</a>
+                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort=sort_by, page=page-1) }}">Trước</a>
                     </li>
                     {% endif %}
                     
@@ -130,14 +126,14 @@
                         </li>
                         {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, page=p) }}">{{ p }}</a>
+                            <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort=sort_by, page=p) }}">{{ p }}</a>
                         </li>
                         {% endif %}
                     {% endfor %}
                     
                     {% if page < total_pages %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, page=page+1) }}">Tiếp</a>
+                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort=sort_by, page=page+1) }}">Tiếp</a>
                     </li>
                     {% endif %}
                 </ul>
