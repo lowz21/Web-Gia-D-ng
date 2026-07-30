@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def create_app():
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = "21DH114235-Ha-Minh-Tri-ecommerce-2026"
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "21DH114235-Ha-Minh-Tri-ecommerce-2026")
     app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "static", "uploads")
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -25,8 +25,11 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(address_bp)
 
-    from jobs.scheduler import start_scheduler
-    start_scheduler(app)
+    # Start scheduler only on Render (not on Vercel serverless)
+    # Vercel uses cron jobs via API endpoint instead
+    if os.getenv("RENDER") or not os.getenv("VERCEL"):
+        from jobs.scheduler import start_scheduler
+        start_scheduler(app)
 
     @app.context_processor
     def inject_globals():

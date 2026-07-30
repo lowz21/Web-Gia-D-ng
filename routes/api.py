@@ -385,3 +385,31 @@ def payment_webhook():
     if not ok:
         return jsonify({"error": msg}), 400
     return jsonify({"success": True, "order_id": order_id, "status": "paid", "message": msg})
+
+
+@api_bp.route("/cron/cancel-expired-orders", methods=["POST"])
+def cron_cancel_expired_orders():
+    """
+    Vercel Cron Job Endpoint for cancelling expired pending orders.
+    Protected by CRON_SECRET_KEY environment variable.
+    """
+    cron_secret = os.getenv("CRON_SECRET_KEY", "")
+    
+    # Verify secret key
+    provided_secret = request.headers.get("X-Cron-Secret") or request.args.get("secret")
+    
+    if not cron_secret or not provided_secret or provided_secret != cron_secret:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        n = cancel_expired_pending_orders()
+        return jsonify({
+            "status": "success",
+            "cancelled_orders": n,
+            "message": f"Cancelled {n} expired pending orders"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
