@@ -20,7 +20,7 @@
                         <!-- Categories -->
                         <div class="mb-3">
                             <label class="form-label">Danh mục</label>
-                            <select name="danh-muc" class="form-select">
+                            <select name="danh_muc" class="form-select">
                                 <option value="">Tất cả</option>
                                 {% for cat in categories %}
                                 <option value="{{ cat.Slug }}" {% if cat_slug == cat.Slug %}selected{% endif %}>
@@ -35,10 +35,10 @@
                             <label class="form-label">Khoảng giá</label>
                             <div class="row">
                                 <div class="col-6">
-                                    <input type="number" name="min-gia" class="form-control" placeholder="Từ" value="{{ min_price }}">
+                                    <input type="number" name="min_price" class="form-control" placeholder="Từ" value="{{ min_price }}">
                                 </div>
                                 <div class="col-6">
-                                    <input type="number" name="max-gia" class="form-control" placeholder="Đến" value="{{ max_price }}">
+                                    <input type="number" name="max_price" class="form-control" placeholder="Đến" value="{{ max_price }}">
                                 </div>
                             </div>
                         </div>
@@ -69,9 +69,9 @@
                         Sắp xếp
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort='newest') }}">Mới nhất</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort='price_asc') }}">Giá thấp đến cao</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort='price_desc') }}">Giá cao đến thấp</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_price=min_price, max_price=max_price, sort='newest') }}">Mới nhất</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_price=min_price, max_price=max_price, sort='price_asc') }}">Giá thấp đến cao</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_price=min_price, max_price=max_price, sort='price_desc') }}">Giá cao đến thấp</a></li>
                     </ul>
                 </div>
             </div>
@@ -114,7 +114,7 @@
                 <ul class="pagination justify-content-center">
                     {% if page > 1 %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort=sort_by, page=page-1) }}">Trước</a>
+                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_price=min_price, max_price=max_price, sort=sort_by, page=page-1) }}">Trước</a>
                     </li>
                     {% endif %}
                     
@@ -126,14 +126,14 @@
                         </li>
                         {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort=sort_by, page=p) }}">{{ p }}</a>
+                            <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_price=min_price, max_price=max_price, sort=sort_by, page=p) }}">{{ p }}</a>
                         </li>
                         {% endif %}
                     {% endfor %}
                     
                     {% if page < total_pages %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_gia=min_price, max_gia=max_price, sort=sort_by, page=page+1) }}">Tiếp</a>
+                        <a class="page-link" href="{{ url_for('shop.shop', q=keyword, danh_muc=cat_slug, min_price=min_price, max_price=max_price, sort=sort_by, page=page+1) }}">Tiếp</a>
                     </li>
                     {% endif %}
                 </ul>
