@@ -113,7 +113,7 @@ def chatbot():
             import google.generativeai as genai
             
             genai.configure(api_key=gemini_api_key)
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-3.6-flash-exp')
             
             # Lấy context sản phẩm
             product_context = get_product_context()
@@ -124,7 +124,7 @@ def chatbot():
 {product_context}
 
 HƯỚNG DẪN:
-- Trả lời ngắn gọn, thân thiện, dưới 200 từ
+- Trả lời ngắn gọn, thân thiện, dưới 500 từ
 - Tư vấn dựa trên danh sách sản phẩm ở trên
 - Nếu khách hỏi về sản phẩm cụ thể, hãy tư vấn đúng sản phẩm đó từ danh sách
 - Nếu khách hỏi về giá, hãy báo giá từ danh sách
