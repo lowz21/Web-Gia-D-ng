@@ -1,7 +1,10 @@
 import re
 import unicodedata
+import logging
 from functools import wraps
 from flask import session, redirect, url_for, flash, request
+
+logger = logging.getLogger(__name__)
 
 ORDER_STATUS = {
     "pending_payment": "Chờ thanh toán QR (PENDING_PAYMENT)",
@@ -77,95 +80,64 @@ def format_currency(value):
 
 
 def to_dict_safe(row):
-    """Safely converts sqlite3.Row or dict-like object into a standard Python dict."""
+    """Safely converts sqlite3.Row, dict, or tuple-like object into a pure Python dict."""
     if row is None:
         return {}
     if isinstance(row, dict):
         return row
-    if hasattr(row, 'keys'): # Handles sqlite3.Row
+    try:
+        # Convert sqlite3.Row to standard dict
         return dict(row)
-    return {}
+    except (TypeError, ValueError):
+        return {}
 
-def get_product_id_safe(product_row):
-    """Safely extract product ID from dict, sqlite3.Row, or model instance."""
-    if not product_row:
-        return None
-        
-    p_dict = to_dict_safe(product_row)
-    if p_dict:
-        for key in ['MaSanPham', 'id', 'san_pham_id', 'id_san_pham', 'masanpham', 'ID']:
-            if key in p_dict and p_dict[key] is not None:
-                return p_dict[key]
-
-    # If it's an object/model instance
-    for attr in ['MaSanPham', 'id', 'san_pham_id', 'id_san_pham']:
-        if hasattr(product_row, attr):
-            val = getattr(product_row, attr)
-            if val is not None:
-                return val
-
-    # Fallback to index access if available
+def get_effective_price(product_row):
+    """Safely computes price without ever calling .get() directly on sqlite3.Row."""
     try:
-        return product_row[0]
-    except Exception:
-        return None
+        if not product_row:
+            return 0.0, 0.0
 
-def get_effective_price(product_row, promotions=None):
-    """Safely calculate product price without throwing AttributeError on sqlite3.Row."""
-    try:
+        # 1. Safely convert to dictionary first
         p_dict = to_dict_safe(product_row)
-        
-        # 1. Extract base price safely
-        price = 0.0
+
+        # 2. Extract price if dictionary conversion succeeded
         if p_dict:
-            price = (p_dict.get('Gia') or 
-                     p_dict.get('gia_ban') or 
-                     p_dict.get('gia') or 
-                     p_dict.get('GiaBan') or 0.0)
-        elif hasattr(product_row, 'gia_ban'):
-            price = getattr(product_row, 'gia_ban', 0.0)
-        elif hasattr(product_row, 'gia'):
-            price = getattr(product_row, 'gia', 0.0)
+            # Check known price column names
+            price_keys = ['gia_ban', 'Gia', 'gia', 'GiaBan', 'DonGia', 'GiaNiemYet', 'GiaKhuyenMai', 'price']
+            for key in price_keys:
+                if key in p_dict and p_dict[key] is not None:
+                    try:
+                        val = float(p_dict[key])
+                        if val > 0:
+                            return val, 0.0
+                    except (ValueError, TypeError):
+                        continue
 
-        # 2. Extract product ID
-        product_id = get_product_id_safe(product_row)
-        if not product_id:
-            return float(price or 0.0), 0.0
+            # Fallback search for any key containing 'gia' or 'price'
+            for key, val in p_dict.items():
+                if any(k in str(key).lower() for k in ['gia', 'price']):
+                    if val is not None:
+                        try:
+                            val_float = float(val)
+                            if val_float > 0:
+                                return val_float, 0.0
+                        except (ValueError, TypeError):
+                            continue
 
-        # 3. Get current price from database function if available
-        try:
-            from database.db import get_current_price
-            current_price = get_current_price(product_id)
-            final_price = float(current_price) if current_price else float(price or 0.0)
-        except Exception:
-            final_price = float(price or 0.0)
+        # 3. Extract price if it is an ORM Model / Object with attributes
+        for attr in ['gia_ban', 'Gia', 'gia', 'GiaBan', 'DonGia', 'price']:
+            if hasattr(product_row, attr):
+                val = getattr(product_row, attr)
+                if val is not None:
+                    try:
+                        val_float = float(val)
+                        if val_float > 0:
+                            return val_float, 0.0
+                    except (ValueError, TypeError):
+                        continue
 
-        # 4. Handle promotions if provided
-        if promotions is None:
-            try:
-                from database.db import query_all
-                today = __import__("datetime").date.today().isoformat()
-                promotions = query_all(
-                    """SELECT * FROM KhuyenMai
-                       WHERE TrangThai = 'hoat_dong'
-                       AND date(NgayBatDau) <= date(?)
-                       AND date(NgayKetThuc) >= date(?)
-                       AND (MaSanPham IS NULL OR MaSanPham = ?)""",
-                    (today, today, product_id),
-                )
-            except Exception:
-                promotions = []
-        
-        discount = 0
-        for promo in promotions:
-            promo_dict = to_dict_safe(promo)
-            promo_discount = promo_dict.get('PhanTramGiam', 0) if promo_dict else 0
-            discount = max(discount, int(promo_discount) if promo_discount else 0)
-        
-        if discount:
-            return round(final_price * (100 - discount) / 100, 0), discount
-        return final_price, 0
+        return 0.0, 0.0
 
     except Exception as e:
-        print(f"Error in get_effective_price: {str(e)}")
-        return 0.0, 0
+        logger.error(f"Error in get_effective_price: {str(e)}")
+        return 0.0, 0.0
