@@ -99,11 +99,16 @@ def addresses():
         flash("Vui lòng đăng nhập để xem sổ địa chỉ", "warning")
         return redirect(url_for("auth.login"))
     
+    user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (user_id,))
+    if not user:
+        flash("Không tìm thấy thông tin người dùng", "danger")
+        return redirect(url_for("auth.login"))
+    
     addresses = query_all(
         "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? ORDER BY LaMacDinh DESC, NgayTao DESC",
         (user_id,)
     )
-    return render_template("profile/addresses.html", addresses=addresses)
+    return render_template("profile/addresses.html", addresses=addresses, user=user)
 
 
 @profile_bp.route("/doi-mat-khau", methods=["GET", "POST"])
@@ -115,30 +120,30 @@ def change_password():
         flash("Vui lòng đăng nhập để đổi mật khẩu", "warning")
         return redirect(url_for("auth.login"))
     
+    user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (user_id,))
+    if not user:
+        flash("Không tìm thấy thông tin người dùng", "danger")
+        return redirect(url_for("auth.login"))
+    
     if request.method == "POST":
         old_password = request.form.get("old_password", "")
         new_password = request.form.get("new_password", "")
         confirm_password = request.form.get("confirm_password", "")
         
-        user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (user_id,))
-        if not user:
-            flash("Không tìm thấy thông tin người dùng", "danger")
-            return redirect(url_for("auth.login"))
-        
         # Verify old password
         from werkzeug.security import check_password_hash
         if not check_password_hash(user["MatKhau"], old_password):
             flash("Mật khẩu cũ không đúng", "danger")
-            return render_template("profile/change_password.html")
+            return render_template("profile/change_password.html", user=user)
         
         # Validate new password
         if len(new_password) < 6:
             flash("Mật khẩu mới phải có ít nhất 6 ký tự", "danger")
-            return render_template("profile/change_password.html")
+            return render_template("profile/change_password.html", user=user)
         
         if new_password != confirm_password:
             flash("Mật khẩu mới không khớp", "danger")
-            return render_template("profile/change_password.html")
+            return render_template("profile/change_password.html", user=user)
         
         # Update password
         from werkzeug.security import generate_password_hash
@@ -150,4 +155,4 @@ def change_password():
         flash("Đổi mật khẩu thành công!", "success")
         return redirect(url_for("profile.change_password"))
     
-    return render_template("profile/change_password.html")
+    return render_template("profile/change_password.html", user=user)
