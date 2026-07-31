@@ -87,7 +87,7 @@
     {% endif %}
 
     <div style="text-align: center;">
-      <a href="{{ url_for('shop.pending_payment_orders') }}" class="btn btn-accent">Đơn chờ thanh toán</a>
+      <a href="/don-hang-cua-toi" class="btn btn-accent">Đơn chờ thanh toán</a>
       <a href="{{ url_for('shop.my_orders') }}" class="btn btn-primary">Xem đơn hàng của tôi</a>
       <a href="{{ url_for('shop.shop') }}" class="btn btn-secondary" style="margin-left: 1rem;">Tiếp tục mua sắm</a>
     </div>
@@ -131,7 +131,7 @@
       } else if (st.is_cancelled) {
         PendingOrders.removeOrder(orderId);
         showToast("Đơn đã hủy", "Đơn hàng hết hạn thanh toán.", "warning");
-        window.location.href = "{{ url_for('shop.pending_payment_orders') }}";
+        window.location.href = "/don-hang-cua-toi";
       }
     }, 3000);
   }
