@@ -27,7 +27,14 @@ def profile():
             email = request.form.get("email", "").strip()
             sdt = request.form.get("sdt", "").strip()
             gioi_tinh = request.form.get("gioi_tinh", "Khác")
-            ngay_sinh = request.form.get("ngay_sinh", "")
+            
+            # Handle date of birth from dropdowns
+            ngay_sinh = None
+            ngay = request.form.get("ngay_sinh_ngay", "")
+            thang = request.form.get("ngay_sinh_thang", "")
+            nam = request.form.get("ngay_sinh_nam", "")
+            if ngay and thang and nam:
+                ngay_sinh = f"{nam}-{thang.zfill(2)}-{ngay.zfill(2)}"
             
             # Handle avatar upload
             avatar = user.get("Avatar", "default-avatar.png")

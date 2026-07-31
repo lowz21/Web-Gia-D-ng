@@ -108,10 +108,10 @@
                 
                 <!-- Campaign Tabs -->
                 <div class="campaign-tabs">
-                    <button class="campaign-tab active">Khuyến mãi hot</button>
-                    <button class="campaign-tab">Sản phẩm mới</button>
-                    <button class="campaign-tab">Bán chạy</button>
-                    <button class="campaign-tab">Giảm giá sâu</button>
+                    <a href="{{ url_for('shop.shop', sort='price_desc') }}" class="campaign-tab {% if request.args.get('sort') == 'price_desc' %}active{% endif %}">Khuyến mãi hot</a>
+                    <a href="{{ url_for('shop.shop', sort='newest') }}" class="campaign-tab {% if request.args.get('sort') == 'newest' or not request.args.get('sort') %}active{% endif %}">Sản phẩm mới</a>
+                    <a href="{{ url_for('shop.shop', sort='price_asc') }}" class="campaign-tab {% if request.args.get('sort') == 'price_asc' %}active{% endif %}">Bán chạy</a>
+                    <a href="{{ url_for('shop.shop', sort='price_desc') }}" class="campaign-tab {% if request.args.get('sort') == 'price_desc' %}active{% endif %}">Giảm giá sâu</a>
                 </div>
             </div>
         </div>
@@ -582,11 +582,23 @@
     border-radius: 6px;
     font-weight: 600;
     transition: all 0.2s;
+    text-decoration: none;
+    color: #333;
+    text-align: center;
+    display: block;
 }
 
 .campaign-tab.active {
     background: #2563eb;
     color: white;
+}
+
+.campaign-tab:hover {
+    background: #f0f0f0;
+}
+
+.campaign-tab.active:hover {
+    background: #1d4ed8;
 }
 
 /* Sub-Banners */
@@ -838,14 +850,14 @@ document.addEventListener('DOMContentLoaded', function() {
         startAutoPlay();
     }
     
-    // Campaign Tabs
-    const tabs = document.querySelectorAll('.campaign-tab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-        });
-    });
+    // Campaign Tabs - No longer needed as they are now links
+    // const tabs = document.querySelectorAll('.campaign-tab');
+    // tabs.forEach(tab => {
+    //     tab.addEventListener('click', () => {
+    //         tabs.forEach(t => t.classList.remove('active'));
+    //         tab.classList.add('active');
+    //     });
+    // });
 });
 </script>
 {% endblock %}

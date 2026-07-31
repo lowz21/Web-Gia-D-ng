@@ -80,11 +80,15 @@ def shop():
     per_page = 12
 
     sql = """
-        SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL
+        SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL,
+               bg.GiaBan as CurrentGiaBan
         FROM SanPham sp
         JOIN DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
         JOIN CuaHang ch ON sp.MaCuaHang = ch.MaCuaHang
         LEFT JOIN Product_Images pi ON sp.MaSanPham = pi.MaSanPham AND pi.LaChinh = 1
+        LEFT JOIN BangGia bg ON sp.MaSanPham = bg.MaSanPham 
+            AND bg.IsActive = 1 
+            AND (bg.NgayKetThuc IS NULL OR bg.NgayKetThuc > datetime('now'))
         WHERE sp.TrangThai = 'hoat_dong'"""
     params = []
 
@@ -98,28 +102,28 @@ def shop():
     if min_price:
         try:
             min_price_val = float(min_price)
-            sql += " AND sp.GiaBan >= ?"
-            params.append(min_price_val)
+            sql += " AND (bg.GiaBan >= ? OR (bg.GiaBan IS NULL AND sp.GiaBan >= ?))"
+            params.extend([min_price_val, min_price_val])
         except ValueError:
             pass
     if max_price:
         try:
             max_price_val = float(max_price)
-            sql += " AND sp.GiaBan <= ?"
-            params.append(max_price_val)
+            sql += " AND (bg.GiaBan <= ? OR (bg.GiaBan IS NULL AND sp.GiaBan <= ?))"
+            params.extend([max_price_val, max_price_val])
         except ValueError:
             pass
 
     # Sorting
     if sort_by == "price_asc":
-        sql += " ORDER BY sp.GiaBan ASC"
+        sql += " ORDER BY COALESCE(bg.GiaBan, sp.GiaBan) ASC"
     elif sort_by == "price_desc":
-        sql += " ORDER BY sp.GiaBan DESC"
+        sql += " ORDER BY COALESCE(bg.GiaBan, sp.GiaBan) DESC"
     else:  # newest
         sql += " ORDER BY sp.MaSanPham DESC"
 
     count_sql = sql.replace(
-        "SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL",
+        "SELECT sp.*, dm.TenDanhMuc, dm.Slug as DanhMucSlug, ch.TenCuaHang, pi.URL as PrimaryImageURL, bg.GiaBan as CurrentGiaBan",
         "SELECT COUNT(*) as c",
     )
     # Remove ORDER BY clause from count query
