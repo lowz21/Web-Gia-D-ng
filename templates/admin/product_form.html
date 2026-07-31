@@ -51,8 +51,8 @@
 {% if price_history %}
 <h3 style="margin-top:2rem;">Lịch sử thay đổi giá</h3>
 <div class="table-wrap"><table>
-  <thead><tr><th>Ngày</th><th>Giá cũ</th><th>Giá mới</th><th>Ghi chú</th></tr></thead>
-  <tbody>{% for h in price_history %}<tr><td>{{ h.NgayThayDoi }}</td><td>{{ format_currency(h.GiaCu) if h.GiaCu else '-' }}</td><td>{{ format_currency(h.GiaMoi) }}</td><td>{{ h.GhiChu }}</td></tr>{% endfor %}</tbody>
+  <thead><tr><th>Ngày áp dụng</th><th>Giá bán</th><th>Ngày kết thúc</th><th>Trạng thái</th></tr></thead>
+  <tbody>{% for h in price_history %}<tr><td>{{ h.NgayApDung }}</td><td>{{ format_currency(h.GiaBan) }}</td><td>{{ h.NgayKetThuc if h.NgayKetThuc else 'Đang áp dụng' }}</td><td>{% if h.IsActive == 1 %}Đang áp dụng{% else %}Đã hết hạn{% endif %}</td></tr>{% endfor %}</tbody>
 </table></div>
 {% endif %}
 {% endblock %}

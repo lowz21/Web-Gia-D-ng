@@ -426,12 +426,18 @@ def api_product_price_history(product_id):
         # Format the data for the frontend
         formatted_history = []
         for record in price_history:
+            # Convert sqlite3.Row to dict if needed
+            if hasattr(record, 'keys'):
+                record_dict = dict(record)
+            else:
+                record_dict = record
+            
             formatted_history.append({
-                'MaBangGia': record.get('MaBangGia'),
-                'GiaBan': float(record.get('GiaBan', 0)),
-                'NgayApDung': record.get('NgayApDung'),
-                'NgayKetThuc': record.get('NgayKetThuc'),
-                'IsActive': record.get('IsActive', 0)
+                'MaBangGia': record_dict.get('MaBangGia'),
+                'GiaBan': float(record_dict.get('GiaBan', 0)),
+                'NgayApDung': record_dict.get('NgayApDung'),
+                'NgayKetThuc': record_dict.get('NgayKetThuc'),
+                'IsActive': record_dict.get('IsActive', 0)
             })
         
         return jsonify(formatted_history)
