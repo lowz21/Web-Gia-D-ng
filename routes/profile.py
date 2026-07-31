@@ -18,8 +18,15 @@ def allowed_file(filename):
 @login_required()
 def profile():
     """User profile edit page"""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem hồ sơ", "warning")
+        return redirect(url_for("auth.login"))
+    
     user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (user_id,))
+    if not user:
+        flash("Không tìm thấy thông tin người dùng", "danger")
+        return redirect(url_for("auth.login"))
     
     if request.method == "POST":
         try:
@@ -87,7 +94,11 @@ def profile():
 @login_required()
 def addresses():
     """User address book page"""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem sổ địa chỉ", "warning")
+        return redirect(url_for("auth.login"))
+    
     addresses = query_all(
         "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? ORDER BY LaMacDinh DESC, NgayTao DESC",
         (user_id,)
@@ -99,7 +110,10 @@ def addresses():
 @login_required()
 def change_password():
     """Change password page"""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để đổi mật khẩu", "warning")
+        return redirect(url_for("auth.login"))
     
     if request.method == "POST":
         old_password = request.form.get("old_password", "")
@@ -107,6 +121,9 @@ def change_password():
         confirm_password = request.form.get("confirm_password", "")
         
         user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (user_id,))
+        if not user:
+            flash("Không tìm thấy thông tin người dùng", "danger")
+            return redirect(url_for("auth.login"))
         
         # Verify old password
         from werkzeug.security import check_password_hash
