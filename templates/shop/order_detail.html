@@ -116,9 +116,9 @@
   </div>
   <p style="font-size:1.2rem;font-weight:800;">Tổng: {{ format_currency(order.TongTien) }}</p>
 
-  {% if order.TrangThai in ['cho_xac_nhan', 'da_xac_nhan'] %}
-  <form method="post" action="{{ url_for('shop.order_cancel', order_id=order.MaDonHang) }}" style="margin-top:1rem;">
-    <button type="submit" class="btn btn-danger" onclick="return confirm('Bạn chắc chắn muốn hủy đơn?')">Hủy đơn hàng</button>
+  {% if order.TrangThai in ['pending_payment', 'cho_xac_nhan'] %}
+  <form method="post" action="{{ url_for('shop.cancel_order', order_id=order.MaDonHang) }}" style="margin-top:1rem;">
+    <button type="submit" class="btn btn-danger" onclick="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">Hủy đơn hàng</button>
   </form>
   {% endif %}
 

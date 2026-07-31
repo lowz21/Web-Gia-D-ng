@@ -9,75 +9,6 @@
     </div>
 </div>
 
-<!-- Main Header -->
-<div class="main-header">
-    <div class="container">
-        <div class="header-grid">
-            <!-- Logo -->
-            <div class="header-logo">
-                <a href="{{ url_for('shop.index') }}" class="logo-link">
-                    <span class="logo-icon">🏠</span>
-                    <div class="logo-text">
-                        <span class="logo-main">WEB GIA DỤNG PRO</span>
-                        <span class="logo-sub">Sàn TMĐT Đồ Gia Dụng</span>
-                    </div>
-                </a>
-            </div>
-            
-            <!-- Search Bar -->
-            <div class="header-search">
-                <form action="{{ url_for('shop.shop') }}" method="get" class="search-form">
-                    <input type="text" name="q" placeholder="Tìm kiếm sản phẩm..." value="{{ request.args.get('q', '') }}">
-                    <button type="submit" class="search-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
-                    </button>
-                </form>
-            </div>
-            
-            <!-- Branch Selector -->
-            <div class="header-branch">
-                <select class="branch-select">
-                    <option>Chi nhánh: Hà Nội</option>
-                    <option>Chi nhánh: TP.HCM</option>
-                    <option>Chi nhánh: Đà Nẵng</option>
-                </select>
-            </div>
-            
-            <!-- User Actions -->
-            <div class="header-actions">
-                <a href="{{ url_for('shop.cart') }}" class="action-link cart-link">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
-                    {% if cart_count %}
-                    <span class="cart-badge">{{ cart_count }}</span>
-                    {% endif %}
-                </a>
-                {% if current_user %}
-                <a href="{{ url_for('shop.my_orders') }}" class="action-link">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </a>
-                {% else %}
-                <a href="{{ url_for('auth.login') }}" class="action-link">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Hero Section -->
 <div class="hero-section">
     <div class="container">
@@ -89,47 +20,21 @@
                     <h3>Danh mục</h3>
                 </div>
                 <ul class="category-list">
-                    <li class="category-item hot">
+                    <li class="category-item hot" onclick="showToast('Thông báo', 'Tính năng đang được cập nhật!', 'info')">
                         <span class="cat-icon">🔥</span>
                         <span class="cat-name">Chương trình Hot</span>
                         <span class="cat-arrow">›</span>
                     </li>
+                    {% for cat in categories %}
                     <li class="category-item">
-                        <span class="cat-icon">⭐</span>
-                        <span class="cat-name">Sản phẩm cao cấp</span>
+                        <a href="{{ url_for('shop.shop', danh_muc=cat.Slug) }}" style="display:flex;align-items:center;gap:0.75rem;flex:1;text-decoration:none;color:inherit;">
+                            <span class="cat-icon">📦</span>
+                            <span class="cat-name">{{ cat.TenDanhMuc }}</span>
+                        </a>
                         <span class="cat-arrow">›</span>
                     </li>
-                    <li class="category-item">
-                        <span class="cat-icon">❄️</span>
-                        <span class="cat-name">Điện tử - Điện lạnh</span>
-                        <span class="cat-arrow">›</span>
-                    </li>
-                    <li class="category-item">
-                        <span class="cat-icon">🍳</span>
-                        <span class="cat-name">Điện gia dụng</span>
-                        <span class="cat-arrow">›</span>
-                    </li>
-                    <li class="category-item">
-                        <span class="cat-icon">🏠</span>
-                        <span class="cat-name">Gia dụng</span>
-                        <span class="cat-arrow">›</span>
-                    </li>
-                    <li class="category-item">
-                        <span class="cat-icon">📱</span>
-                        <span class="cat-name">Điện thoại/Tablet</span>
-                        <span class="cat-arrow">›</span>
-                    </li>
-                    <li class="category-item">
-                        <span class="cat-icon">🔌</span>
-                        <span class="cat-name">Phụ kiện</span>
-                        <span class="cat-arrow">›</span>
-                    </li>
-                    <li class="category-item">
-                        <span class="cat-icon">🛋️</span>
-                        <span class="cat-name">Nội thất</span>
-                        <span class="cat-arrow">›</span>
-                    </li>
-                    <li class="category-item">
+                    {% endfor %}
+                    <li class="category-item" onclick="showToast('Thông báo', 'Tính năng đang được cập nhật!', 'info')">
                         <span class="cat-icon">💬</span>
                         <span class="cat-name">Tư vấn - Khuyến mãi</span>
                         <span class="cat-arrow">›</span>
@@ -181,30 +86,30 @@
 <div class="sub-banners">
     <div class="container">
         <div class="sub-banner-grid">
-            <div class="sub-banner sub-banner-1">
+            <a href="{{ url_for('shop.shop', sale=1) }}" class="sub-banner sub-banner-1" style="text-decoration:none;color:inherit;">
                 <div class="sub-banner-content">
                     <span class="sub-badge">SALE</span>
                     <h4>Điện lạnh</h4>
                     <p>Giảm đến 30%</p>
                 </div>
                 <div class="sub-banner-icon">❄️</div>
-            </div>
-            <div class="sub-banner sub-banner-2">
+            </a>
+            <a href="{{ url_for('shop.shop', sale=1) }}" class="sub-banner sub-banner-2" style="text-decoration:none;color:inherit;">
                 <div class="sub-banner-content">
                     <span class="sub-badge">HOT</span>
                     <h4>Điện gia dụng</h4>
                     <p>Giảm đến 40%</p>
                 </div>
                 <div class="sub-banner-icon">🍳</div>
-            </div>
-            <div class="sub-banner sub-banner-3">
+            </a>
+            <a href="{{ url_for('shop.shop', sale=1) }}" class="sub-banner sub-banner-3" style="text-decoration:none;color:inherit;">
                 <div class="sub-banner-content">
                     <span class="sub-badge">NEW</span>
                     <h4>Điện thoại</h4>
                     <p>Giảm đến 25%</p>
                 </div>
                 <div class="sub-banner-icon">📱</div>
-            </div>
+            </a>
         </div>
     </div>
 </div>

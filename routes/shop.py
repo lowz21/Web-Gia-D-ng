@@ -9,6 +9,7 @@ from services.order_payment import (
     payment_deadline_from_now,
     order_accessible,
     cancel_pending_order,
+    restore_order_stock,
 )
 
 shop_bp = Blueprint("shop", __name__)
@@ -33,7 +34,7 @@ def index():
     )
     
     # Featured categories
-    categories = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc LIMIT 8")
+    categories = query_all("SELECT * FROM DanhMuc ORDER BY TenDanhMuc")
     
     # Featured products (sản phẩm nổi bật)
     featured_products = query_all(
@@ -143,7 +144,10 @@ def shop():
         products=products,
         categories=categories,
         keyword=keyword,
-        cat_slug=cat_slug,
+        cat_slug=category_slug,
+        min_price=min_price,
+        max_price=max_price,
+        sort_by=sort_by,
         page=page,
         per_page=per_page,
         total_pages=max(1, (total + per_page - 1) // per_page),
@@ -796,6 +800,54 @@ def order_confirmation(order_id):
         order_status=ORDER_STATUS,
         expires_at=expires_at,
     )
+
+
+@shop_bp.route("/don-hang/huy/<int:order_id>", methods=["POST"])
+@login_required(roles=["khach_hang"])
+def cancel_order(order_id):
+    """Hủy đơn hàng - chỉ cho phép hủy khi đang chờ thanh toán hoặc chờ xác nhận"""
+    order = query_one(
+        "SELECT * FROM DonHang WHERE MaDonHang = ? AND MaKhachHang = ?",
+        (order_id, session["user_id"]),
+    )
+    if not order:
+        flash("Không tìm thấy đơn hàng.", "danger")
+        return redirect(url_for("shop.my_orders"))
+    
+    # Chỉ cho phép hủy khi đang chờ thanh toán hoặc chờ xác nhận
+    if order["TrangThai"] not in ("pending_payment", "cho_xac_nhan"):
+        flash("Đơn hàng này không thể hủy.", "warning")
+        return redirect(url_for("shop.order_detail", order_id=order_id))
+    
+    conn = get_db()
+    try:
+        # Khôi phục tồn kho
+        restore_order_stock(conn, order_id)
+        
+        # Cập nhật trạng thái đơn hàng
+        old_status = order["TrangThai"]
+        conn.execute(
+            "UPDATE DonHang SET TrangThai = 'cancelled' WHERE MaDonHang = ?",
+            (order_id,),
+        )
+        conn.execute(
+            "UPDATE ThanhToan SET TrangThai = 'da_huy' WHERE MaDonHang = ?",
+            (order_id,),
+        )
+        conn.execute(
+            """INSERT INTO LichSuDonHang (MaDonHang, TrangThaiCu, TrangThaiMoi, GhiChu)
+               VALUES (?, ?, 'cancelled', 'Khách hàng hủy đơn')""",
+            (order_id, old_status),
+        )
+        conn.commit()
+        flash("Đã hủy đơn hàng thành công.", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Có lỗi xảy ra khi hủy đơn hàng: {str(e)}", "danger")
+    finally:
+        conn.close()
+    
+    return redirect(url_for("shop.order_detail", order_id=order_id))
 
 
 @shop_bp.route("/api/pending-orders")

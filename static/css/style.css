@@ -141,6 +141,21 @@ a:hover { color: var(--primary-dark); }
 .grid { display: grid; gap: 1.25rem; }
 .grid-4 { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+/* Universal Card & Box Elevation - Global Visual Contrast */
+.card, .product-card, .box, .sidebar-box, .order-card, .admin-card, .table-container, .form-container {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  padding: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover, .product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
 .card {
   background: #ffffff;
   border-radius: var(--radius);
