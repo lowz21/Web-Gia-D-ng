@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, session
-from database.db import query_all, query_one
+from database.db import query_all, query_one, get_price_history
 from helpers import format_currency, get_effective_price, ORDER_STATUS
 from dotenv import load_dotenv
 from services.order_payment import (
@@ -415,3 +415,13 @@ def cron_cancel_expired_orders():
             "status": "error",
             "message": str(e)
         }), 500
+
+
+@api_bp.route("/san-pham/<int:product_id>/lich-su-gia")
+def api_product_price_history(product_id):
+    """API endpoint to get price history for a product"""
+    try:
+        price_history = get_price_history(product_id)
+        return jsonify(price_history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

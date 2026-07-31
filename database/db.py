@@ -108,6 +108,56 @@ def execute(sql, params=()):
         conn.close()
 
 
+def get_current_price(product_id):
+    """Get the current active price for a product from BangGia table."""
+    price_record = query_one(
+        """SELECT GiaBan FROM BangGia 
+           WHERE MaSanPham = ? AND IsActive = 1 
+           AND (NgayKetThuc IS NULL OR NgayKetThuc > datetime('now'))
+           ORDER BY NgayApDung DESC LIMIT 1""",
+        (product_id,)
+    )
+    return price_record['GiaBan'] if price_record else None
+
+
+def create_price_record(product_id, price, conn=None):
+    """Create a new price record in BangGia table."""
+    should_close = conn is None
+    if conn is None:
+        conn = get_db()
+    
+    try:
+        # Deactivate previous active price
+        conn.execute(
+            """UPDATE BangGia SET NgayKetThuc = datetime('now'), IsActive = 0
+               WHERE MaSanPham = ? AND IsActive = 1 AND NgayKetThuc IS NULL""",
+            (product_id,)
+        )
+        
+        # Insert new price record
+        conn.execute(
+            """INSERT INTO BangGia (MaSanPham, GiaBan, NgayApDung, IsActive, NgayTao)
+               VALUES (?, ?, datetime('now'), 1, datetime('now'))""",
+            (product_id, price)
+        )
+        
+        if should_close:
+            conn.commit()
+    finally:
+        if should_close:
+            conn.close()
+
+
+def get_price_history(product_id):
+    """Get all price history for a product."""
+    return query_all(
+        """SELECT * FROM BangGia 
+           WHERE MaSanPham = ? 
+           ORDER BY NgayApDung DESC""",
+        (product_id,)
+    )
+
+
 def init_db():
     # Skip SQLite initialization on Vercel (serverless environment)
     # Vercel requires external PostgreSQL, not local SQLite
@@ -126,6 +176,7 @@ def init_db():
     _migrate_dia_chi_khach_hang(conn)
     _migrate_product_images(conn)
     _migrate_banners(conn)
+    _migrate_bang_gia(conn)
     conn.commit()
 
     count = conn.execute("SELECT COUNT(*) FROM NguoiDung").fetchone()[0]
@@ -230,6 +281,27 @@ def _migrate_banners(conn):
             TrangThai VARCHAR(20) DEFAULT 'hoat_dong',
             ThuTu INTEGER DEFAULT 0,
             NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+
+
+def _migrate_bang_gia(conn):
+    """Create BangGia table if not exists."""
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "BangGia" in tables:
+        return
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS BangGia (
+            MaBangGia INTEGER PRIMARY KEY AUTOINCREMENT,
+            MaSanPham INTEGER NOT NULL,
+            GiaBan DECIMAL(15,2) NOT NULL,
+            NgayApDung DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            NgayKetThuc DATETIME,
+            IsActive INTEGER DEFAULT 1,
+            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham)
         )
     """)
     conn.commit()

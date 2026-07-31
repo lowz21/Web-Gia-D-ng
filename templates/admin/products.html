@@ -21,6 +21,7 @@
         <td>{{ p.TrangThai }}</td>
         <td>
           <a href="{{ url_for('admin.product_edit', pid=p.MaSanPham) }}" class="btn btn-outline btn-sm">Sửa</a>
+          <button onclick="showPriceHistory({{ p.MaSanPham }})" class="btn btn-info btn-sm">Lịch sử giá</button>
           <form action="{{ url_for('admin.product_delete', pid=p.MaSanPham) }}" method="POST" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?');">
             <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
           </form>
@@ -30,4 +31,138 @@
     </tbody>
   </table>
 </div>
+
+<!-- Price History Modal -->
+<div id="priceHistoryModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header">
+      <h3 id="priceHistoryTitle">Lịch sử giá</h3>
+      <span class="close" onclick="closePriceHistory()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <table id="priceHistoryTable">
+        <thead>
+          <tr>
+            <th>Giá bán</th>
+            <th>Ngày áp dụng</th>
+            <th>Ngày kết thúc</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="priceHistoryBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+  background-color: white;
+  margin: 10% auto;
+  padding: 20px;
+  border-radius: 8px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+.close {
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+#priceHistoryTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+#priceHistoryTable th, #priceHistoryTable td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+#priceHistoryTable th {
+  background-color: #f2f2f2;
+}
+</style>
+
+<script>
+const productsData = {{ products|tojson }};
+
+async function showPriceHistory(productId) {
+  const productData = productsData.find(p => p.MaSanPham === productId);
+  const productName = productData ? productData.TenSanPham : 'Sản phẩm';
+  
+  document.getElementById('priceHistoryTitle').textContent = 'Lịch sử giá: ' + productName;
+  document.getElementById('priceHistoryModal').style.display = 'block';
+  
+  try {
+    const response = await fetch(`/api/san-pham/${productId}/lich-su-gia`);
+    const data = await response.json();
+    
+    const tbody = document.getElementById('priceHistoryBody');
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Không có lịch sử giá</td></tr>';
+      return;
+    }
+    
+    data.forEach(record => {
+      const row = document.createElement('tr');
+      const isActive = record.IsActive === 1 && (!record.NgayKetThuc || new Date(record.NgayKetThuc) > new Date());
+      const statusBadge = isActive 
+        ? '<span class="badge badge-success">Đang áp dụng</span>' 
+        : '<span class="badge badge-secondary">Đã hết hạn</span>';
+      
+      row.innerHTML = `
+        <td>${formatCurrency(record.GiaBan)}</td>
+        <td>${formatDate(record.NgayApDung)}</td>
+        <td>${record.NgayKetThuc ? formatDate(record.NgayKetThuc) : '-'}</td>
+        <td>${statusBadge}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  } catch (error) {
+    console.error('Error fetching price history:', error);
+    document.getElementById('priceHistoryBody').innerHTML = '<tr><td colspan="4" style="text-align:center;">Lỗi tải dữ liệu</td></tr>';
+  }
+}
+
+function closePriceHistory() {
+  document.getElementById('priceHistoryModal').style.display = 'none';
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleString('vi-VN');
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const modal = document.getElementById('priceHistoryModal');
+  if (event.target == modal) {
+    closePriceHistory();
+  }
+}
+</script>
 {% endblock %}

@@ -2,7 +2,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 import os
-from database.db import query_one, query_all, execute, get_db
+from database.db import query_one, query_all, execute, get_db, create_price_record, get_price_history
 from helpers import login_required, slugify, ORDER_STATUS, format_currency, get_effective_price, ROLE_LABELS
 from services.cloud_storage import upload_image, delete_image
 
@@ -287,10 +287,8 @@ def product_edit(pid):
 
         old_price = float(product["GiaBan"])
         if price != old_price:
-            execute(
-                "INSERT INTO LichSuGia (MaSanPham, GiaCu, GiaMoi, GhiChu) VALUES (?, ?, ?, 'Cập nhật giá')",
-                (pid, old_price, price),
-            )
+            # Create new BangGia record instead of LichSuGia
+            create_price_record(pid, price)
 
         execute(
             """UPDATE SanPham SET TenSanPham=?, MoTa=?, GiaBan=?, GiaGoc=?, SoLuongTon=?,
@@ -300,9 +298,7 @@ def product_edit(pid):
         flash("Cập nhật sản phẩm thành công.", "success")
         return redirect(url_for("admin.products"))
 
-    price_history = query_all(
-        "SELECT * FROM LichSuGia WHERE MaSanPham = ? ORDER BY NgayThayDoi DESC", (pid,)
-    )
+    price_history = get_price_history(pid)
     return render_template(
         "admin/product_form.html",
         product=product,

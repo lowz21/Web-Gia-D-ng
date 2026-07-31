@@ -77,7 +77,17 @@ def format_currency(value):
 
 
 def get_effective_price(product_row, promotions=None):
-    price = float(product_row["GiaBan"])
+    from database.db import get_current_price
+    
+    # Try to get current price from BangGia table first
+    current_price = get_current_price(product_row["MaSanPham"])
+    
+    # Fallback to GiaBan if BangGia doesn't have price
+    if current_price is None:
+        price = float(product_row["GiaBan"])
+    else:
+        price = float(current_price)
+    
     if promotions is None:
         from database.db import query_all
         today = __import__("datetime").date.today().isoformat()
