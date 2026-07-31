@@ -1,4 +1,5 @@
 from datetime import date
+import traceback
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from database.db import query_one, query_all, execute, get_db
 from helpers import login_required, ORDER_STATUS, PAYMENT_METHODS, format_currency, get_effective_price
@@ -489,36 +490,54 @@ def checkout():
     user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (session["user_id"],))
 
     if request.method == "POST":
-        address_type = request.form.get("address_type", "manual")
-        payment = request.form.get("payment", "COD")
-        voucher_code = request.form.get("voucher", "").strip().upper()
-        
-        # Xử lý địa chỉ
-        address = ""
-        if address_type == "manual":
-            address = request.form.get("address", "").strip()
-        else:
-            # Lấy địa chỉ từ database
-            try:
-                address_id = int(address_type)
-                saved_address = query_one(
-                    "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
-                    (address_id, session["user_id"])
-                )
-                if saved_address:
-                    # Format địa chỉ
-                    parts = []
-                    if saved_address["TenNguoiNhan"]:
-                        parts.append(saved_address["TenNguoiNhan"])
-                    if saved_address["SoDienThoai"]:
-                        parts.append(saved_address["SoDienThoai"])
-                    parts.append(saved_address["DiaChi"])
-                    address = " | ".join(parts)
-            except (ValueError, TypeError):
+        try:
+            address_type = request.form.get("address_type", "manual")
+            payment = request.form.get("payment", "COD")
+            voucher_code = request.form.get("voucher", "").strip().upper()
+            seller_note = request.form.get("seller_note", "").strip()
+            
+            # Xử lý địa chỉ - Safe parsing without assuming address_id is integer
+            address = ""
+            if address_type == "manual":
+                address = request.form.get("address", "").strip()
+            else:
+                # Lấy địa chỉ từ database - handle both ID and raw text
+                try:
+                    address_id = int(address_type)
+                    saved_address = query_one(
+                        "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
+                        (address_id, session["user_id"])
+                    )
+                    if saved_address:
+                        # Format địa chỉ
+                        parts = []
+                        if saved_address["TenNguoiNhan"]:
+                            parts.append(saved_address["TenNguoiNhan"])
+                        if saved_address["SoDienThoai"]:
+                            parts.append(saved_address["SoDienThoai"])
+                        parts.append(saved_address["DiaChi"])
+                        address = " | ".join(parts)
+                except (ValueError, TypeError):
+                    # If address_type is not an integer, treat it as raw text address
+                    address = address_type.strip()
+            
+            # Fallback to manual address if still empty
+            if not address:
                 address = request.form.get("address", "").strip()
 
-        if not address:
-            flash("Vui lòng nhập hoặc chọn địa chỉ giao hàng.", "warning")
+            if not address:
+                flash("Vui lòng nhập hoặc chọn địa chỉ giao hàng.", "warning")
+                return render_template(
+                    "shop/checkout.html",
+                    items=items,
+                    user=user,
+                    payment_methods=PAYMENT_METHODS,
+                    format_currency=format_currency,
+                    get_effective_price=get_effective_price,
+                )
+        except Exception as e:
+            traceback.print_exc()
+            flash(f"Có lỗi xảy ra khi xử lý địa chỉ: {str(e)}", "danger")
             return render_template(
                 "shop/checkout.html",
                 items=items,
@@ -636,11 +655,12 @@ def checkout():
                 )
             except Exception as e:
                 # Log error but don't fail checkout
-                pass
+                traceback.print_exc()
             conn.execute("DELETE FROM ChiTietGioHang WHERE MaGioHang = ?", (cart_row["MaGioHang"],))
             conn.commit()
         except Exception as e:
             conn.rollback()
+            traceback.print_exc()
             flash(f"Có lỗi xảy ra khi đặt hàng: {str(e)}", "danger")
             return redirect(url_for("shop.cart"))
         finally:

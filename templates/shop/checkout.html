@@ -1,100 +1,422 @@
 {% extends "base.html" %}
-{% block title %}Đặt hàng{% endblock %}
+{% block title %}Thanh toán{% endblock %}
+{% block extra_head %}
+<style>
+.checkout-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .checkout-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Shopee-style envelope border */
+.checkout-envelope {
+  background: linear-gradient(90deg, #ee4d2d 0%, #ff7337 50%, #ee4d2d 100%);
+  background-size: 20px 20px;
+  padding: 3px;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.checkout-envelope-inner {
+  background: white;
+  padding: 1rem;
+  border-radius: 2px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.address-box {
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff9f2;
+}
+
+.address-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.address-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.address-icon {
+  color: #ee4d2d;
+  font-size: 1.2rem;
+}
+
+.address-details {
+  flex: 1;
+}
+
+.address-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.address-phone {
+  color: #666;
+  margin-left: 0.5rem;
+}
+
+.address-text {
+  color: #555;
+  margin-top: 0.25rem;
+}
+
+.change-address-btn {
+  color: #ee4d2d;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Product table */
+.product-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.product-table th {
+  background: #f5f5f5;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.product-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.product-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.product-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.product-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.product-variant {
+  color: #757575;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.seller-note {
+  margin-top: 0.5rem;
+}
+
+.seller-note textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+/* Payment methods */
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.payment-option {
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.payment-option:hover {
+  border-color: #ee4d2d;
+  background: #fff9f2;
+}
+
+.payment-option.selected {
+  border: 2px solid #ee4d2d;
+  background: #fff9f2;
+}
+
+.payment-radio {
+  width: 18px;
+  height: 18px;
+  accent-color: #ee4d2d;
+}
+
+.payment-icon {
+  font-size: 1.5rem;
+}
+
+.payment-label {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.payment-desc {
+  color: #757575;
+  font-size: 0.85rem;
+}
+
+/* Summary bar */
+.summary-box {
+  background: #fff9f2;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 1.5rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.summary-row.total {
+  border-top: 1px solid #e5e5e5;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #ee4d2d;
+}
+
+.place-order-btn {
+  width: 100%;
+  background: linear-gradient(90deg, #ee4d2d, #ff7337);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: opacity 0.2s;
+}
+
+.place-order-btn:hover {
+  opacity: 0.9;
+}
+
+.place-order-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+</style>
+{% endblock %}
 {% block content %}
-<div class="container" style="max-width:700px;padding:2rem 1rem;">
-  <h1 class="page-title">Xác nhận đặt hàng</h1>
-  <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
-    <h3>Sản phẩm</h3>
-    {% for item in items %}
-    {% set price, _ = get_effective_price(item) %}
-    <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #e2e8f0;">
-      <span>{{ item.TenSanPham }} x {{ item.SoLuong }}</span>
-      <span>{{ format_currency(price * item.SoLuong) }}</span>
+<div class="checkout-container">
+  <!-- Left Column -->
+  <div class="checkout-left">
+    <!-- Envelope Border -->
+    <div class="checkout-envelope">
+      <div class="checkout-envelope-inner">
+        <span style="color: #ee4d2d; font-weight: 600;">📦 Thanh toán an toàn với Gia Dụng Pro</span>
+      </div>
     </div>
-    {% endfor %}
-    <div style="display:flex;justify-content:space-between;padding-top:1rem;font-weight:800;font-size:1.1rem;">
-      <span>Tổng cộng</span><span class="price">{{ format_currency(total) }}</span>
-    </div>
-  </div>
-  <form method="post" class="card" style="padding:1.5rem;">
-    <div class="form-group mb-3">
-      <label class="form-label fw-bold">Địa chỉ giao hàng *</label>
+
+    <!-- Address Section -->
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+      <h3 class="section-title">
+        <span>📍</span> Địa chỉ nhận hàng
+      </h3>
       
-      <!-- Danh sách địa chỉ đã lưu -->
-      <div id="saved-addresses" class="mb-3">
+      <div id="saved-addresses">
         <div id="addresses-loading" class="text-muted">Đang tải địa chỉ...</div>
       </div>
       
-      <!-- Nút thêm địa chỉ mới -->
-      <button type="button" class="btn btn-outline-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+      <button type="button" class="btn btn-outline-primary btn-sm" onclick="showToast('Thông báo', 'Tính năng đang được cập nhật!', 'info')">
         + Thêm địa chỉ mới
       </button>
       
-      <!-- Input địa chỉ thủ công -->
-      <div class="form-check mb-2">
+      <div class="form-check mt-3">
         <input class="form-check-input" type="radio" name="address_type" id="address_manual" value="manual">
         <label class="form-check-label" for="address_manual">
           Nhập địa chỉ mới
         </label>
       </div>
-      <textarea class="form-control" name="address" id="manual-address" placeholder="Nhập địa chỉ giao hàng đầy đủ" style="display:none;"></textarea>
+      <textarea class="form-control mt-2" name="address" id="manual-address" placeholder="Nhập địa chỉ giao hàng đầy đủ" style="display:none;"></textarea>
     </div>
-    <div class="form-group mb-3">
-      <label class="form-label fw-bold">Phương thức thanh toán</label>
-      {% for key, label in payment_methods.items() %}
-      <label style="display:block;font-weight:400;margin:.3rem 0;">
-        <input type="radio" name="payment" value="{{ key }}" {% if key == 'COD' %}checked{% endif %}> {{ label }}
-      </label>
-      {% endfor %}
-    </div>
-    <button type="submit" class="btn btn-accent" style="width:100%;">Xác nhận đặt hàng</button>
-  </form>
-</div>
 
-<!-- Modal thêm địa chỉ nhanh -->
-<div class="modal fade" id="addAddressModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Thêm địa chỉ mới</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Product Table Section -->
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+      <h3 class="section-title">
+        <span>🛒</span> Sản phẩm
+      </h3>
+      
+      <table class="product-table">
+        <thead>
+          <tr>
+            <th style="width: 50%;">Sản phẩm</th>
+            <th style="width: 15%;">Đơn giá</th>
+            <th style="width: 15%;">Số lượng</th>
+            <th style="width: 20%;">Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          {% set price, _ = get_effective_price(item) %}
+          <tr>
+            <td>
+              <div class="product-info">
+                <div class="product-image">
+                  {% if item.PrimaryImageURL %}
+                  <img src="{{ item.PrimaryImageURL }}" alt="{{ item.TenSanPham }}">
+                  {% else %}
+                  <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;">📦</div>
+                  {% endif %}
+                </div>
+                <div>
+                  <div class="product-name">{{ item.TenSanPham }}</div>
+                  <div class="product-variant">{{ item.TenDanhMuc }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ format_currency(price) }}</td>
+            <td>{{ item.SoLuong }}</td>
+            <td style="color: #ee4d2d; font-weight: 500;">{{ format_currency(price * item.SoLuong) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      
+      <div class="seller-note">
+        <label style="font-weight: 500; color: #555;">Lời nhắn cho người bán:</label>
+        <textarea name="seller_note" rows="2" placeholder="Nhập lời nhắn (tùy chọn)"></textarea>
       </div>
-      <form id="quick-add-address-form">
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="quick_ten_nhan" class="form-label">Tên người nhận</label>
-            <input type="text" class="form-control" id="quick_ten_nhan" name="ten_nhan" placeholder="Nhập tên người nhận">
-          </div>
-          <div class="mb-3">
-            <label for="quick_sdt" class="form-label">Số điện thoại</label>
-            <input type="text" class="form-control" id="quick_sdt" name="sdt" placeholder="Nhập số điện thoại">
-          </div>
-          <div class="mb-3">
-            <label for="quick_dia_chi" class="form-label">Địa chỉ *</label>
-            <textarea class="form-control" id="quick_dia_chi" name="dia_chi" rows="3" required placeholder="Nhập địa chỉ giao hàng"></textarea>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="quick_la_mac_dinh" name="la_mac_dinh">
-            <label class="form-check-label" for="quick_la_mac_dinh">
-              Đặt làm địa chỉ mặc định
-            </label>
+    </div>
+
+    <!-- Payment Methods Section -->
+    <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+      <h3 class="section-title">
+        <span>💳</span> Phương thức thanh toán
+      </h3>
+      
+      <div class="payment-methods">
+        <div class="payment-option selected" data-payment="COD">
+          <input type="radio" name="payment" value="COD" checked class="payment-radio">
+          <span class="payment-icon">💵</span>
+          <div class="payment-label">
+            <div>Thanh toán khi nhận hàng (COD)</div>
+            <div class="payment-desc">Thanh toán tiền mặt khi nhận hàng</div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" class="btn btn-primary">Lưu địa chỉ</button>
+        
+        <div class="payment-option" data-payment="chuyen_khoan">
+          <input type="radio" name="payment" value="chuyen_khoan" class="payment-radio">
+          <span class="payment-icon">📱</span>
+          <div class="payment-label">
+            <div>Chuyển khoản QR (VietQR)</div>
+            <div class="payment-desc">Quét mã QR để chuyển khoản nhanh chóng</div>
+          </div>
         </div>
-      </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column - Summary -->
+  <div class="checkout-right">
+    <div class="summary-box">
+      <h3 style="margin: 0 0 1rem; font-size: 1.1rem; color: #333;">Tóm tắt đơn hàng</h3>
+      
+      <div class="summary-row">
+        <span>Tổng tiền hàng</span>
+        <span>{{ format_currency(total) }}</span>
+      </div>
+      
+      <div class="summary-row">
+        <span>Phí vận chuyển</span>
+        <span>Miễn phí</span>
+      </div>
+      
+      <div class="summary-row">
+        <span>Giảm giá</span>
+        <span>₫0</span>
+      </div>
+      
+      <div class="summary-row total">
+        <span>Tổng thanh toán</span>
+        <span>{{ format_currency(total) }}</span>
+      </div>
+      
+      <button type="submit" form="checkout-form" class="place-order-btn">
+        Đặt hàng
+      </button>
+      
+      <div style="margin-top: 1rem; font-size: 0.8rem; color: #757575; text-align: center;">
+        Nhấn "Đặt hàng" đồng nghĩa với việc bạn đồng ý với Điều khoản dịch vụ của Gia Dụng Pro
+      </div>
     </div>
   </div>
 </div>
+
+<form id="checkout-form" method="post" style="display: none;"></form>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Load saved addresses
 document.addEventListener('DOMContentLoaded', function() {
   loadAddresses();
+  
+  // Payment method selection
+  document.querySelectorAll('.payment-option').forEach(option => {
+    option.addEventListener('click', function() {
+      document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+      this.classList.add('selected');
+      const radio = this.querySelector('input[type="radio"]');
+      radio.checked = true;
+    });
+  });
   
   // Handle address type change
   document.querySelectorAll('input[name="address_type"]').forEach(radio => {
@@ -110,36 +432,51 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Quick add address form
-  document.getElementById('quick-add-address-form').addEventListener('submit', async function(e) {
+  // Form submission
+  document.getElementById('checkout-form').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
+    const formData = new FormData();
+    const payment = document.querySelector('input[name="payment"]:checked').value;
+    const addressType = document.querySelector('input[name="address_type"]:checked');
     
-    try {
-      const response = await fetch('/dia-chi', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams(data)
-      });
-      
-      if (response.ok) {
-        // Close modal and reload addresses
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addAddressModal'));
-        modal.hide();
-        this.reset();
-        loadAddresses();
-        alert('Đã thêm địa chỉ thành công!');
-      } else {
-        alert('Có lỗi xảy ra khi thêm địa chỉ.');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Có lỗi xảy ra khi thêm địa chỉ.');
+    if (!addressType) {
+      showToast('Lỗi', 'Vui lòng chọn địa chỉ giao hàng', 'danger');
+      return;
     }
+    
+    if (addressType.value === 'manual') {
+      const manualAddress = document.getElementById('manual-address').value;
+      if (!manualAddress.trim()) {
+        showToast('Lỗi', 'Vui lòng nhập địa chỉ giao hàng', 'danger');
+        return;
+      }
+      formData.append('address', manualAddress);
+      formData.append('address_type', 'manual');
+    } else {
+      formData.append('address_type', addressType.value);
+    }
+    
+    formData.append('payment', payment);
+    formData.append('seller_note', document.querySelector('textarea[name="seller_note"]').value);
+    
+    // Submit to /dat-hang
+    fetch('/dat-hang', {
+      method: 'POST',
+      body: formData
+    }).then(response => {
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else {
+        return response.text();
+      }
+    }).then(data => {
+      if (data) {
+        showToast('Lỗi', 'Có lỗi xảy ra khi đặt hàng', 'danger');
+      }
+    }).catch(error => {
+      showToast('Lỗi', 'Có lỗi xảy ra khi đặt hàng', 'danger');
+    });
   });
 });
 
@@ -154,34 +491,39 @@ async function loadAddresses() {
       let html = '';
       data.addresses.forEach((addr, index) => {
         const checked = index === 0 ? 'checked' : '';
-        const badge = addr.la_mac_dinh ? '<span class="badge bg-primary ms-2">Mặc định</span>' : '';
+        const badge = addr.la_mac_dinh ? '<span class="badge" style="background:#ee4d2d;color:white;margin-left:0.5rem;">Mặc định</span>' : '';
         html += `
-          <div class="form-check mb-2 p-3 border rounded">
-            <input class="form-check-input" type="radio" name="address_type" id="addr_${addr.id}" value="${addr.id}" ${checked}>
-            <label class="form-check-label" for="addr_${addr.id}" style="cursor: pointer;">
-              <strong>${addr.ten_nhan || 'Không có tên'}</strong> ${badge}<br>
-              <small class="text-muted">${addr.sdt || 'Không có SĐT'}</small><br>
-              <small>${addr.dia_chi}</small>
-            </label>
+          <div class="address-box">
+            <div class="address-header">
+              <div class="address-info">
+                <span class="address-icon">📍</span>
+                <div class="address-details">
+                  <span class="address-name">${addr.ten_nhan || 'Không có tên'}</span>
+                  <span class="address-phone">${addr.sdt || 'Không có SĐT'}</span>
+                </div>
+              </div>
+              ${badge}
+            </div>
+            <div class="address-text">${addr.dia_chi}</div>
+            <input type="radio" name="address_type" value="${addr.id}" ${checked} style="margin-top:0.5rem;">
           </div>
         `;
       });
       container.innerHTML = html;
       
-      // Set first address as selected
       if (data.addresses.length > 0) {
         document.getElementById('manual-address').style.display = 'none';
         document.getElementById('manual-address').required = false;
       }
     } else {
-      container.innerHTML = '<p class="text-muted mb-0">Bạn chưa có địa chỉ nào. Vui lòng thêm địa chỉ mới hoặc nhập địa chỉ thủ công.</p>';
+      container.innerHTML = '<p class="text-muted">Bạn chưa có địa chỉ nào. Vui lòng thêm địa chỉ mới hoặc nhập địa chỉ thủ công.</p>';
       document.getElementById('address_manual').checked = true;
       document.getElementById('manual-address').style.display = 'block';
       document.getElementById('manual-address').required = true;
     }
   } catch (error) {
     console.error('Error loading addresses:', error);
-    document.getElementById('saved-addresses').innerHTML = '<p class="text-danger mb-0">Không thể tải địa chỉ.</p>';
+    document.getElementById('saved-addresses').innerHTML = '<p class="text-danger">Không thể tải địa chỉ.</p>';
   }
 }
 </script>

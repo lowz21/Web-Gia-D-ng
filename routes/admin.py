@@ -503,6 +503,50 @@ def order_update_status(order_id):
     return redirect(url_for("admin.order_detail", order_id=order_id))
 
 
+@admin_bp.route("/don-hang/<int:order_id>/da-thanh-toan", methods=["POST"])
+@login_required(roles=["admin", "chu_cua_hang"])
+def order_mark_paid(order_id):
+    """Mark VietQR payment as paid and update order status"""
+    order = query_one("SELECT * FROM DonHang WHERE MaDonHang = ?", (order_id,))
+    if not order:
+        flash("Không tìm thấy đơn hàng.", "danger")
+        return redirect(url_for("admin.orders"))
+    
+    if order["PhuongThucThanhToan"] != "chuyen_khoan":
+        flash("Đơn hàng này không phải thanh toán QR.", "warning")
+        return redirect(url_for("admin.order_detail", order_id=order_id))
+    
+    conn = get_db()
+    try:
+        # Update payment status
+        conn.execute(
+            "UPDATE ThanhToan SET TrangThai = 'da_thanh_toan' WHERE MaDonHang = ?",
+            (order_id,)
+        )
+        
+        # Update order status if still pending
+        if order["TrangThai"] in ["pending_payment", "cho_xac_nhan"]:
+            old_status = order["TrangThai"]
+            conn.execute(
+                "UPDATE DonHang SET TrangThai = 'da_xac_nhan' WHERE MaDonHang = ?",
+                (order_id,)
+            )
+            conn.execute(
+                "INSERT INTO LichSuDonHang (MaDonHang, TrangThaiCu, TrangThaiMoi, GhiChu) VALUES (?, ?, ?, ?)",
+                (order_id, old_status, "da_xac_nhan", "Admin xác nhận đã thanh toán QR")
+            )
+        
+        conn.commit()
+        flash("Đã đánh dấu đơn hàng thanh toán thành công.", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Có lỗi xảy ra: {str(e)}", "danger")
+    finally:
+        conn.close()
+    
+    return redirect(url_for("admin.order_detail", order_id=order_id))
+
+
 @admin_bp.route("/don-hang/<int:order_id>/nhan-giao", methods=["POST"])
 @login_required(roles=["giao_nhan", "admin"])
 def order_accept_ship(order_id):

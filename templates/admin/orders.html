@@ -9,7 +9,7 @@
 </div>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Mã ĐH</th><th>Khách hàng</th><th>SĐT</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày đặt</th><th></th></tr></thead>
+    <thead><tr><th>Mã ĐH</th><th>Khách hàng</th><th>SĐT</th><th>Tổng tiền</th><th>PTTT</th><th>Trạng thái</th><th>Ngày đặt</th><th></th></tr></thead>
     <tbody>
       {% for o in orders %}
       <tr>
@@ -17,10 +17,35 @@
         <td>{{ o.HoTen }}</td>
         <td>{{ o.SoDienThoai }}</td>
         <td>{{ format_currency(o.TongTien) }}</td>
+        <td>
+          {% if o.PhuongThucThanhToan == 'COD' %}
+          <span class="badge badge-info">COD</span>
+          {% else %}
+          <span class="badge badge-warning">QR</span>
+          {% endif %}
+        </td>
         <td><span class="badge badge-info">{{ order_status.get(o.TrangThai, o.TrangThai) }}</span></td>
         <td>{{ o.NgayDat }}</td>
         <td>
           <a href="{{ url_for('admin.order_detail', order_id=o.MaDonHang) }}" class="btn btn-outline btn-sm">Chi tiết</a>
+          
+          {% if current_user.VaiTro in ['admin', 'chu_cua_hang'] %}
+          <!-- Status Update Dropdown -->
+          <div style="display:inline-block;position:relative;">
+            <select onchange="updateOrderStatus({{ o.MaDonHang }}, this.value)" style="padding:0.25rem 0.5rem;border-radius:4px;border:1px solid #e2e8f0;">
+              <option value="">Cập nhật trạng thái</option>
+              {% for key, label in order_status.items() %}
+              <option value="{{ key }}" {% if o.TrangThai == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <!-- VietQR Payment Toggle -->
+          {% if o.PhuongThucThanhToan == 'chuyen_khoan' and o.TrangThai in ['pending_payment', 'cho_xac_nhan'] %}
+          <button onclick="markPaymentPaid({{ o.MaDonHang }})" class="btn btn-success btn-sm" style="margin-left:0.25rem;">✓ Đã thanh toán</button>
+          {% endif %}
+          {% endif %}
+          
           {% if current_user.VaiTro == 'giao_nhan' and o.TrangThai in ['da_xac_nhan', 'dang_xu_ly'] %}
           <form action="{{ url_for('admin.order_accept_ship', order_id=o.MaDonHang) }}" method="post" style="display:inline;">
             <button class="btn btn-primary btn-sm">Nhận giao</button>
@@ -34,9 +59,36 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" style="text-align:center;">Không có đơn hàng</td></tr>
+      <tr><td colspan="8" style="text-align:center;">Không có đơn hàng</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<script>
+function updateOrderStatus(orderId, newStatus) {
+  if (!newStatus) return;
+  if (confirm('Bạn có chắc chắn muốn cập nhật trạng thái đơn hàng này?')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin/don-hang/${orderId}/cap-nhat`;
+    const statusInput = document.createElement('input');
+    statusInput.name = 'status';
+    statusInput.value = newStatus;
+    form.appendChild(statusInput);
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function markPaymentPaid(orderId) {
+  if (confirm('Bạn có chắc chắn muốn đánh dấu đơn hàng này đã thanh toán?')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin/don-hang/${orderId}/da-thanh-toan`;
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>
 {% endblock %}
