@@ -1,32 +1,164 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
-<h1 class="page-title">Thống kê & Báo cáo</h1>
-<div class="stats-grid">
-  <div class="stat-card"><div class="label">Tổng doanh thu</div><div class="value">{{ format_currency(total_revenue) }}</div></div>
-  <div class="stat-card"><div class="label">Tổng đơn hàng</div><div class="value">{{ total_orders }}</div></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<h1 class="page-title">📊 Thống kê & Báo cáo</h1>
+
+<!-- Stats Cards -->
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+    <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">💰 Tổng doanh thu</div>
+    <div style="font-size: 1.8rem; font-weight: 700;">{{ format_currency(total_revenue) }}</div>
+  </div>
+  <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);">
+    <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">📦 Tổng đơn hàng</div>
+    <div style="font-size: 1.8rem; font-weight: 700;">{{ total_orders }}</div>
+  </div>
+  <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);">
+    <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">🛍️ Tổng sản phẩm</div>
+    <div style="font-size: 1.8rem; font-weight: 700;">{{ total_products }}</div>
+  </div>
 </div>
 
-<h2 style="font-size:1.1rem;">Doanh thu theo tháng</h2>
-<div class="table-wrap" style="margin-bottom:1.5rem;">
-  <table>
-    <thead><tr><th>Tháng</th><th>Doanh thu</th></tr></thead>
-    <tbody>{% for r in revenue_by_month %}<tr><td>{{ r.thang }}</td><td>{{ format_currency(r.doanh_thu) }}</td></tr>{% else %}<tr><td colspan="2">Chưa có dữ liệu</td></tr>{% endfor %}</tbody>
-  </table>
+<!-- Charts Row -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+  <!-- Revenue Chart -->
+  <div class="card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-bottom: 1rem; color: #333;">📈 Doanh thu theo tháng</h3>
+    <div style="height: 300px;">
+      <canvas id="revenueChart"></canvas>
+    </div>
+  </div>
+  
+  <!-- Status Chart -->
+  <div class="card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-bottom: 1rem; color: #333;">📊 Trạng thái đơn hàng</h3>
+    <div style="height: 300px;">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
 </div>
 
-<h2 style="font-size:1.1rem;">Top sản phẩm bán chạy</h2>
-<div class="table-wrap" style="margin-bottom:1.5rem;">
-  <table>
-    <thead><tr><th>Sản phẩm</th><th>Đã bán</th><th>Doanh thu</th></tr></thead>
-    <tbody>{% for p in top_products %}<tr><td>{{ p.TenSanPham }}</td><td>{{ p.sold }}</td><td>{{ format_currency(p.revenue) }}</td></tr>{% else %}<tr><td colspan="3">Chưa có dữ liệu</td></tr>{% endfor %}</tbody>
-  </table>
+<!-- Top Products Table -->
+<div class="card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+  <h3 style="margin-bottom: 1rem; color: #333;">🏆 Top sản phẩm bán chạy</h3>
+  <div class="table-wrap">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: #f8f9fa;">
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e9ecef;">Sản phẩm</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e9ecef;">Đã bán</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e9ecef;">Doanh thu</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in top_products %}
+        <tr style="border-bottom: 1px solid #e9ecef; transition: background 0.2s;">
+          <td style="padding: 12px;">{{ p.TenSanPham }}</td>
+          <td style="padding: 12px; text-align: center; font-weight: 600;">{{ p.sold }}</td>
+          <td style="padding: 12px; text-align: right; color: #28a745; font-weight: 600;">{{ format_currency(p.revenue) }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="3" style="padding: 2rem; text-align: center; color: #6c757d;">Chưa có dữ liệu</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<h2 style="font-size:1.1rem;">Đơn hàng theo trạng thái</h2>
-<div class="table-wrap">
-  <table>
-    <thead><tr><th>Trạng thái</th><th>Số lượng</th></tr></thead>
-    <tbody>{% for s in status_stats %}<tr><td>{{ order_status.get(s.TrangThai, s.TrangThai) }}</td><td>{{ s.cnt }}</td></tr>{% endfor %}</tbody>
-  </table>
-</div>
+<script>
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(revenueCtx, {
+  type: 'line',
+  data: {
+    labels: {{ months_labels|tojson }},
+    datasets: [{
+      label: 'Doanh thu (VNĐ)',
+      data: {{ revenue_data|tojson }},
+      borderColor: '#667eea',
+      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+      borderWidth: 3,
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#667eea',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      pointRadius: 6,
+      pointHoverRadius: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        padding: 12,
+        titleFont: { size: 14 },
+        bodyFont: { size: 13 },
+        callbacks: {
+          label: function(context) {
+            return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.raw);
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(value);
+          }
+        }
+      }
+    }
+  }
+});
+
+// Status Chart
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ status_labels|tojson }},
+    datasets: [{
+      data: {{ status_counts|tojson }},
+      backgroundColor: [
+        '#28a745',
+        '#ffc107',
+        '#dc3545',
+        '#17a2b8',
+        '#6c757d'
+      ],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          usePointStyle: true,
+          font: { size: 12 }
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        padding: 12
+      }
+    }
+  }
+});
+</script>
 {% endblock %}

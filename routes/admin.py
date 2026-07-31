@@ -712,13 +712,29 @@ def statistics():
     )
     total_orders = total_orders_result["c"] if total_orders_result else 0
 
+    total_products_result = query_one(
+        f"""SELECT COUNT(*) as c FROM SanPham sp WHERE 1=1 {shop_filter.replace('sp.', '')}""",
+        params if role == "chu_cua_hang" else []
+    )
+    total_products = total_products_result["c"] if total_products_result else 0
+
+    # Prepare Chart.js data
+    months_labels = [f"T{r['thang'][5:]}/{r['thang'][:4]}" for r in reversed(revenue_by_month)]
+    revenue_data = [float(r["doanh_thu"] or 0) for r in reversed(revenue_by_month)]
+    
+    status_labels = [ORDER_STATUS.get(r["TrangThai"], r["TrangThai"]) for r in status_stats]
+    status_counts = [int(r["cnt"] or 0) for r in status_stats]
+
     return render_template(
         "admin/statistics.html",
-        revenue_by_month=revenue_by_month,
+        months_labels=months_labels,
+        revenue_data=revenue_data,
+        status_labels=status_labels,
+        status_counts=status_counts,
         top_products=top_products,
-        status_stats=status_stats,
         total_revenue=total_revenue,
         total_orders=total_orders,
+        total_products=total_products,
         order_status=ORDER_STATUS,
         format_currency=format_currency,
     )
