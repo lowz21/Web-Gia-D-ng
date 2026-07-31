@@ -201,11 +201,11 @@ def product_detail(slug):
             """SELECT 1 FROM ChiTietDonHang ct
                JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
                WHERE ct.MaSanPham = ? AND dh.MaKhachHang = ? AND dh.TrangThai = 'da_giao'""",
-            (product["MaSanPham"], session["user_id"]),
+            (product["MaSanPham"], session.get("user_id")),
         )
         reviewed = query_one(
             "SELECT 1 FROM DanhGia WHERE MaSanPham = ? AND MaNguoiDung = ?",
-            (product["MaSanPham"], session["user_id"]),
+            (product["MaSanPham"], session.get("user_id")),
         )
         can_review = bought and not reviewed
 
@@ -242,7 +242,12 @@ def product_detail(slug):
 @shop_bp.route("/gio-hang")
 @login_required(roles=["khach_hang"])
 def cart():
-    cart_row = ensure_cart(session["user_id"])
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem giỏ hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
+    cart_row = ensure_cart(user_id)
     items = query_all(
         """SELECT ct.*, sp.TenSanPham, sp.Slug, sp.SoLuongTon, sp.GiaBan, sp.GiaGoc, ch.TenCuaHang
            FROM ChiTietGioHang ct
@@ -269,6 +274,11 @@ def cart():
 @shop_bp.route("/gio-hang/them", methods=["POST"])
 @login_required(roles=["khach_hang"])
 def cart_add():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để thêm vào giỏ hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
     product_id = int(request.form.get("product_id"))
     qty = max(int(request.form.get("quantity", 1) or 1), 1)
 
@@ -280,7 +290,7 @@ def cart_add():
         flash("Sản phẩm đã hết hàng hoặc không đủ số lượng.", "warning")
         return redirect(request.referrer or url_for("shop.index"))
 
-    cart_row = ensure_cart(session["user_id"])
+    cart_row = ensure_cart(user_id)
     existing = query_one(
         "SELECT * FROM ChiTietGioHang WHERE MaGioHang = ? AND MaSanPham = ?",
         (cart_row["MaGioHang"], product_id),
@@ -308,7 +318,12 @@ def cart_add():
 @shop_bp.route("/gio-hang/cap-nhat", methods=["POST"])
 @login_required(roles=["khach_hang"])
 def cart_update():
-    cart_row = ensure_cart(session["user_id"])
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để cập nhật giỏ hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
+    cart_row = ensure_cart(user_id)
     for key, val in request.form.items():
         if key.startswith("qty_"):
             pid = int(key.replace("qty_", ""))
@@ -334,7 +349,12 @@ def cart_update():
 @shop_bp.route("/gio-hang/xoa/<int:product_id>", methods=["POST"])
 @login_required(roles=["khach_hang"])
 def cart_remove(product_id):
-    cart_row = ensure_cart(session["user_id"])
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xóa khỏi giỏ hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
+    cart_row = ensure_cart(user_id)
     execute(
         "DELETE FROM ChiTietGioHang WHERE MaGioHang = ? AND MaSanPham = ?",
         (cart_row["MaGioHang"], product_id),
@@ -439,7 +459,7 @@ def guest_checkout():
                    VALUES (?, ?, 'pending_payment', 'chuyen_khoan', NULL, ?, ?)""",
                 (total, address, deadline.strftime("%Y-%m-%d %H:%M:%S"), guest_token),
             )
-            order_id = cur.lastrowid
+            order_id = cur.lastrowid if hasattr(cur, 'lastrowid') else cur.lastrowid
             for pid, qty, price, subtotal in line_items:
                 conn.execute(
                     "INSERT INTO ChiTietDonHang (MaDonHang, MaSanPham, SoLuong, DonGia, ThanhTien) VALUES (?, ?, ?, ?, ?)",
@@ -458,6 +478,10 @@ def guest_checkout():
                 (order_id,),
             )
             conn.commit()
+        except Exception as e:
+            conn.rollback()
+            flash(f"Lỗi khi tạo đơn hàng: {str(e)}", "danger")
+            return redirect(url_for("shop.guest_checkout"))
         finally:
             conn.close()
 
@@ -480,7 +504,12 @@ def guest_checkout():
 @shop_bp.route("/dat-hang", methods=["GET", "POST"])
 @login_required(roles=["khach_hang"])
 def checkout():
-    cart_row = ensure_cart(session["user_id"])
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để đặt hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
+    cart_row = ensure_cart(user_id)
     items = query_all(
         """SELECT ct.*, sp.TenSanPham, sp.SoLuongTon, sp.GiaBan, sp.MaSanPham
            FROM ChiTietGioHang ct JOIN SanPham sp ON ct.MaSanPham = sp.MaSanPham
@@ -491,7 +520,7 @@ def checkout():
         flash("Giỏ hàng trống.", "warning")
         return redirect(url_for("shop.cart"))
 
-    user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (session["user_id"],))
+    user = query_one("SELECT * FROM NguoiDung WHERE MaNguoiDung = ?", (user_id,))
 
     if request.method == "POST":
         try:
@@ -526,7 +555,7 @@ def checkout():
                         if set_default_address:
                             conn.execute(
                                 "UPDATE DiaChiKhachHang SET LaMacDinh = 0 WHERE MaNguoiDung = ?",
-                                (session["user_id"],)
+                                (user_id,)
                             )
                         
                         # Insert new address
@@ -534,7 +563,7 @@ def checkout():
                             """INSERT INTO DiaChiKhachHang 
                                (MaNguoiDung, TenNguoiNhan, SoDienThoai, DiaChi, LaMacDinh)
                                VALUES (?, ?, ?, ?, ?)""",
-                            (session["user_id"], manual_ten_nhan, manual_sdt, manual_address, 1 if set_default_address else 0)
+                            (user_id, manual_ten_nhan, manual_sdt, manual_address, 1 if set_default_address else 0)
                         )
                         conn.commit()
                         flash("Đã lưu địa chỉ thành công!", "success")
@@ -549,7 +578,7 @@ def checkout():
                     address_id = int(address_type)
                     saved_address = query_one(
                         "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
-                        (address_id, session["user_id"])
+                        (address_id, user_id)
                     )
                     if saved_address:
                         # Format địa chỉ
@@ -645,12 +674,12 @@ def checkout():
                     address,
                     initial_status,
                     payment,
-                    session["user_id"],
+                    user_id,
                     deadline.strftime("%Y-%m-%d %H:%M:%S") if deadline else None,
                     guest_token,
                 ),
             )
-            order_id = cur.lastrowid
+            order_id = cur.lastrowid if hasattr(cur, 'lastrowid') else cur.lastrowid
 
             for pid, qty, price, subtotal in line_items:
                 conn.execute(
@@ -691,7 +720,7 @@ def checkout():
                 conn.execute(
                     "INSERT INTO ThongBao (MaNguoiDung, TieuDe, NoiDung) VALUES (?, ?, ?)",
                     (
-                        session["user_id"],
+                        user_id,
                         "Đặt hàng thành công" if not is_qr else "Đơn chờ thanh toán QR",
                         f"Đơn hàng #{order_id} {'đang chờ quét QR trong ' + str(PAYMENT_DEADLINE_MINUTES) + ' phút.' if is_qr else 'đã được tạo.'}",
                     ),
@@ -737,9 +766,14 @@ def checkout():
 @shop_bp.route("/don-hang-cua-toi")
 @login_required(roles=["khach_hang"])
 def my_orders():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem đơn hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
     orders = query_all(
         """SELECT * FROM DonHang WHERE MaKhachHang = ? ORDER BY NgayDat DESC""",
-        (session["user_id"],),
+        (user_id,),
     )
     return render_template(
         "shop/my_orders.html",
@@ -752,9 +786,14 @@ def my_orders():
 @shop_bp.route("/don-hang/<int:order_id>")
 @login_required(roles=["khach_hang"])
 def order_detail(order_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem chi tiết đơn hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
     order = query_one(
         "SELECT * FROM DonHang WHERE MaDonHang = ? AND MaKhachHang = ?",
-        (order_id, session["user_id"]),
+        (order_id, user_id),
     )
     if not order:
         flash("Không tìm thấy đơn hàng.", "danger")
@@ -869,9 +908,14 @@ def order_confirmation(order_id):
 @login_required(roles=["khach_hang"])
 def cancel_order(order_id):
     """Hủy đơn hàng - chỉ cho phép hủy khi đang chờ thanh toán hoặc chờ xác nhận"""
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để hủy đơn hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
     order = query_one(
         "SELECT * FROM DonHang WHERE MaDonHang = ? AND MaKhachHang = ?",
-        (order_id, session["user_id"]),
+        (order_id, user_id),
     )
     if not order:
         flash("Không tìm thấy đơn hàng.", "danger")
@@ -919,12 +963,16 @@ def api_pending_orders():
     """API trả về danh sách đơn hàng chờ thanh toán của user"""
     from datetime import datetime, timedelta
     
+    user_id = session.get("user_id")
+    if not user_id:
+        return {"error": "Unauthorized"}, 401
+    
     pending_orders = query_all(
         """SELECT * FROM DonHang 
            WHERE MaKhachHang = ? AND TrangThai = 'pending_payment'
            AND HanThanhToan > datetime('now')
            ORDER BY NgayDat DESC""",
-        (session["user_id"],),
+        (user_id,),
     )
     
     result = []
@@ -968,12 +1016,17 @@ def pending_orders_page():
     """Trang hiển thị danh sách đơn hàng chờ thanh toán"""
     from datetime import datetime
     
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem đơn hàng chờ thanh toán", "warning")
+        return redirect(url_for("auth.login"))
+    
     pending_orders = query_all(
         """SELECT * FROM DonHang 
            WHERE MaKhachHang = ? AND TrangThai = 'pending_payment'
            AND HanThanhToan > datetime('now')
            ORDER BY NgayDat DESC""",
-        (session["user_id"],),
+        (user_id,),
     )
     
     orders_with_items = []
@@ -1005,9 +1058,14 @@ def pending_orders_page():
 @shop_bp.route("/don-hang/<int:order_id>/huy", methods=["POST"])
 @login_required(roles=["khach_hang"])
 def order_cancel(order_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để hủy đơn hàng", "warning")
+        return redirect(url_for("auth.login"))
+    
     order = query_one(
         "SELECT * FROM DonHang WHERE MaDonHang = ? AND MaKhachHang = ?",
-        (order_id, session["user_id"]),
+        (order_id, user_id),
     )
     if not order:
         flash("Không tìm thấy đơn hàng.", "danger")
@@ -1045,6 +1103,11 @@ def order_cancel(order_id):
 @shop_bp.route("/san-pham/<slug>/danh-gia", methods=["POST"])
 @login_required(roles=["khach_hang"])
 def add_review(slug):
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để đánh giá sản phẩm", "warning")
+        return redirect(url_for("auth.login"))
+    
     product = query_one("SELECT * FROM SanPham WHERE Slug = ?", (slug,))
     if not product:
         flash("Sản phẩm không tồn tại.", "danger")
@@ -1061,7 +1124,7 @@ def add_review(slug):
         """SELECT dh.MaDonHang FROM ChiTietDonHang ct
            JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
            WHERE ct.MaSanPham = ? AND dh.MaKhachHang = ? AND dh.TrangThai = 'da_giao'""",
-        (product["MaSanPham"], session["user_id"]),
+        (product["MaSanPham"], user_id),
     )
     if not bought:
         flash("Bạn chưa mua sản phẩm này.", "warning")
@@ -1069,7 +1132,7 @@ def add_review(slug):
 
     existing = query_one(
         "SELECT 1 FROM DanhGia WHERE MaSanPham = ? AND MaNguoiDung = ?",
-        (product["MaSanPham"], session["user_id"]),
+        (product["MaSanPham"], user_id),
     )
     if existing:
         flash("Bạn đã đánh giá sản phẩm này.", "info")
@@ -1077,7 +1140,7 @@ def add_review(slug):
 
     execute(
         "INSERT INTO DanhGia (MaSanPham, MaNguoiDung, MaDonHang, SoSao, NoiDung) VALUES (?, ?, ?, ?, ?)",
-        (product["MaSanPham"], session["user_id"], bought["MaDonHang"], stars, content),
+        (product["MaSanPham"], user_id, bought["MaDonHang"], stars, content),
     )
     flash("Gửi đánh giá thành công.", "success")
     return redirect(url_for("shop.product_detail", slug=slug))
@@ -1086,11 +1149,16 @@ def add_review(slug):
 @shop_bp.route("/thong-bao")
 @login_required()
 def notifications():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để xem thông báo", "warning")
+        return redirect(url_for("auth.login"))
+    
     notes = query_all(
         "SELECT * FROM ThongBao WHERE MaNguoiDung = ? ORDER BY NgayTao DESC LIMIT 50",
-        (session["user_id"],),
+        (user_id,),
     )
-    execute("UPDATE ThongBao SET DaDoc = 1 WHERE MaNguoiDung = ?", (session["user_id"],))
+    execute("UPDATE ThongBao SET DaDoc = 1 WHERE MaNguoiDung = ?", (user_id,))
     return render_template("shop/notifications.html", notifications=notes)
 
 
