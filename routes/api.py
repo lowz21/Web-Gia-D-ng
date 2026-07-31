@@ -113,7 +113,7 @@ def chatbot():
             import google.generativeai as genai
             
             genai.configure(api_key=gemini_api_key)
-            model = genai.GenerativeModel('gemini-3.6-flash-exp')
+            model = genai.GenerativeModel('gemini-3.6-flash')
             
             # Lấy context sản phẩm
             product_context = get_product_context()
