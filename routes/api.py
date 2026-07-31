@@ -1,6 +1,7 @@
 import os
 from flask import Blueprint, request, jsonify, session
-from helpers import login_required, calculate_distance_km, calculate_shipping_fee, STORE_LAT, STORE_LNG, query_all, query_one, get_price_history, execute, format_currency, get_effective_price, ORDER_STATUS
+from helpers import login_required, calculate_distance_km, calculate_shipping_fee, STORE_LAT, STORE_LNG, format_currency, get_effective_price, ORDER_STATUS
+from database.db import query_all, query_one, execute, get_price_history
 from dotenv import load_dotenv
 from services.order_payment import (
     complete_order_payment,
