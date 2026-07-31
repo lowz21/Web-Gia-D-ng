@@ -158,6 +158,27 @@
     .pending-order-item:last-child {
       margin-bottom: 0;
     }
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: white;
+      border: 1px solid #e8e8e8;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 200px;
+      z-index: 1000;
+    }
+    .dropdown-menu.show {
+      display: block;
+    }
+    .dropdown-menu a:hover {
+      background-color: #f5f5f5;
+    }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
@@ -200,8 +221,23 @@
             <a href="{{ url_for('admin.orders') }}">Giao hàng</a>
           {% endif %}
           <a href="{{ url_for('shop.notifications') }}">Thông báo</a>
-          <span>{{ current_user.HoTen }}</span>
-          <a href="{{ url_for('auth.logout') }}" class="btn btn-outline btn-sm">Đăng xuất</a>
+          <div class="dropdown">
+            <a href="{{ url_for('profile.profile') }}" class="dropdown-toggle" data-toggle="dropdown">
+              {% if current_user.Avatar and current_user.Avatar != 'default-avatar.png' %}
+                <img src="{{ url_for('static', filename='uploads/avatars/' + current_user.Avatar) }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; vertical-align: middle;">
+              {% else %}
+                <span style="display: inline-block; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; line-height: 32px; margin-right: 8px; vertical-align: middle;">{{ current_user.HoTen[0] if current_user.HoTen else 'U' }}</span>
+              {% endif %}
+              {{ current_user.HoTen }}
+              <span style="margin-left: 4px;">▼</span>
+            </a>
+            <div class="dropdown-menu" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #e8e8e8; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000;">
+              <a href="{{ url_for('profile.profile') }}" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">👤 Tài khoản của tôi</a>
+              <a href="{{ url_for('profile.addresses') }}" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">📍 Sổ địa chỉ</a>
+              <a href="{{ url_for('shop.my_orders') }}" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">📦 Đơn mua</a>
+              <a href="{{ url_for('auth.logout') }}" style="display: block; padding: 12px 16px; color: #dc2626; text-decoration: none;">🚪 Đăng xuất</a>
+            </div>
+          </div>
         {% else %}
           <a href="{{ url_for('auth.login') }}" class="btn btn-outline btn-sm">Đăng nhập</a>
           <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Đăng ký</a>
@@ -309,6 +345,26 @@
         
         showToast(title, text, type);
         alert.remove();
+      });
+      
+      // Dropdown toggle functionality
+      const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+      dropdownToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          const dropdown = this.parentElement;
+          const menu = dropdown.querySelector('.dropdown-menu');
+          menu.classList.toggle('show');
+        });
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown')) {
+          document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+          });
+        }
       });
     });
   </script>

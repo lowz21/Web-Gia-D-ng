@@ -122,29 +122,29 @@
 <div class="sub-banners">
     <div class="container">
         <div class="sub-banner-grid">
-            <a href="{{ url_for('shop.shop', sale=1) }}" class="sub-banner sub-banner-1" style="text-decoration:none;color:inherit;">
+            <a href="{{ url_for('shop.shop') }}" class="sub-banner sub-banner-1" style="text-decoration:none;color:inherit;">
                 <div class="sub-banner-content">
-                    <span class="sub-badge">SALE</span>
-                    <h4>Điện lạnh</h4>
-                    <p>Giảm đến 30%</p>
+                    <span class="sub-badge">VOUCHER</span>
+                    <h4>Miễn Phí Vận Chuyển</h4>
+                    <p>Cho đơn hàng trên 500K</p>
                 </div>
-                <div class="sub-banner-icon">❄️</div>
+                <div class="sub-banner-icon">🚚</div>
             </a>
-            <a href="{{ url_for('shop.shop', sale=1) }}" class="sub-banner sub-banner-2" style="text-decoration:none;color:inherit;">
+            <a href="{{ url_for('shop.shop') }}" class="sub-banner sub-banner-2" style="text-decoration:none;color:inherit;">
                 <div class="sub-banner-content">
-                    <span class="sub-badge">HOT</span>
-                    <h4>Điện gia dụng</h4>
-                    <p>Giảm đến 40%</p>
+                    <span class="sub-badge">BẢO HÀNH</span>
+                    <h4>Chính Hãng 1 Đổi 1</h4>
+                    <p>Trong vòng 30 ngày</p>
                 </div>
-                <div class="sub-banner-icon">🍳</div>
+                <div class="sub-banner-icon">🛡️</div>
             </a>
-            <a href="{{ url_for('shop.shop', sale=1) }}" class="sub-banner sub-banner-3" style="text-decoration:none;color:inherit;">
+            <a href="{{ url_for('shop.shop') }}" class="sub-banner sub-banner-3" style="text-decoration:none;color:inherit;">
                 <div class="sub-banner-content">
-                    <span class="sub-badge">NEW</span>
-                    <h4>Điện thoại</h4>
-                    <p>Giảm đến 25%</p>
+                    <span class="sub-badge">FLASH SALE</span>
+                    <h4>Voucher Giảm 100K</h4>
+                    <p>Áp dụng cho đơn từ 1 triệu</p>
                 </div>
-                <div class="sub-banner-icon">📱</div>
+                <div class="sub-banner-icon">🎁</div>
             </a>
         </div>
     </div>
@@ -205,9 +205,9 @@
         {% set price, discount = get_effective_price(product) %}
         <div class="card">
             {% if product.PrimaryImageURL %}
-            <img src="{{ product.PrimaryImageURL }}" class="card-img" alt="{{ product.TenSanPham }}">
+            <img src="{{ product.PrimaryImageURL }}" class="card-img" alt="{{ product.TenSanPham }}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
             {% elif product.HinhAnh %}
-            <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img" alt="{{ product.TenSanPham }}">
+            <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img" alt="{{ product.TenSanPham }}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
             {% else %}
             <div class="card-img">
                 <span class="display-6">📦</span>
