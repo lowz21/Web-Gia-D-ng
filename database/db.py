@@ -127,20 +127,22 @@ def create_price_record(product_id, price, conn=None):
         conn = get_db()
     
     try:
-        # Deactivate previous active price records
-        conn.execute(
+        # Adapt query for PostgreSQL if needed
+        adapted_sql, adapted_params = adapt_query_for_postgresql(
             """UPDATE BangGia 
                SET NgayKetThuc = datetime('now'), IsActive = 0
                WHERE MaSanPham = ? AND IsActive = 1 AND NgayKetThuc IS NULL""",
             (product_id,)
         )
+        conn.execute(adapted_sql, adapted_params)
         
         # Insert new price record
-        conn.execute(
+        adapted_sql, adapted_params = adapt_query_for_postgresql(
             """INSERT INTO BangGia (MaSanPham, GiaBan, NgayApDung, IsActive, NgayTao)
                VALUES (?, ?, datetime('now'), 1, datetime('now'))""",
             (product_id, price)
         )
+        conn.execute(adapted_sql, adapted_params)
         
         if should_close:
             conn.commit()

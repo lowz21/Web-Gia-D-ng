@@ -5,6 +5,11 @@ import os
 from database.db import query_one, query_all, execute, get_db, create_price_record, get_price_history
 from helpers import login_required, slugify, ORDER_STATUS, format_currency, get_effective_price, ROLE_LABELS
 from services.cloud_storage import upload_image, delete_image
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
 
 # Cấu hình upload hình ảnh
 UPLOAD_FOLDER = 'static/img/products'
@@ -19,9 +24,12 @@ admin_bp = Blueprint("admin", __name__)
 
 
 def get_shop_id():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
     row = query_one(
         "SELECT MaCuaHang FROM CuaHang WHERE MaNguoiDung = ?",
-        (session["user_id"],),
+        (user_id,),
     )
     return row["MaCuaHang"] if row and "MaCuaHang" in row else None
 
@@ -29,7 +37,12 @@ def get_shop_id():
 @admin_bp.route("/")
 @login_required(roles=["admin", "chu_cua_hang"])
 def dashboard():
-    role = session["user"]["VaiTro"]
+    user = session.get("user")
+    if not user:
+        flash("Phiên đăng nhập hết hạn", "warning")
+        return redirect(url_for("auth.login"))
+    
+    role = user["VaiTro"]
     stats = {}
 
     if role == "admin":
@@ -154,7 +167,12 @@ def category_delete(cat_id):
 @admin_bp.route("/san-pham")
 @login_required(roles=["admin", "chu_cua_hang"])
 def products():
-    role = session["user"]["VaiTro"]
+    user = session.get("user")
+    if not user:
+        flash("Phiên đăng nhập hết hạn", "warning")
+        return redirect(url_for("auth.login"))
+    
+    role = user["VaiTro"]
     if role == "admin":
         items = query_all(
             """SELECT sp.*, dm.TenDanhMuc, ch.TenCuaHang FROM SanPham sp
@@ -231,7 +249,7 @@ def product_add():
             flash("Giá sản phẩm phải lớn hơn 0.", "warning")
         elif stock < 0:
             flash("Tồn kho không được âm.", "warning")
-        elif session["user"]["VaiTro"] == "chu_cua_hang" and store_id != shop_id:
+        elif session.get("user", {}).get("VaiTro") == "chu_cua_hang" and store_id != shop_id:
             flash("Bạn chỉ được thêm sản phẩm cho cửa hàng của mình.", "danger")
         else:
             dup = query_one(
@@ -251,6 +269,7 @@ def product_add():
                 try:
                     create_price_record(pid, price)
                 except Exception as e:
+                    logger.error(f"Error creating price record for product {pid}: {str(e)}")
                     flash(f"Lỗi khi tạo lịch sử giá: {str(e)}", "danger")
                     return redirect(url_for("admin.products"))
                 
@@ -269,7 +288,7 @@ def product_edit(pid):
         return redirect(url_for("admin.products"))
 
     shop_id = get_shop_id()
-    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+    if session.get("user", {}).get("VaiTro") == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
         flash("Không có quyền sửa sản phẩm này.", "danger")
         return redirect(url_for("admin.products"))
 
@@ -294,6 +313,7 @@ def product_edit(pid):
             try:
                 create_price_record(pid, price)
             except Exception as e:
+                logger.error(f"Error updating price record for product {pid}: {str(e)}")
                 flash(f"Lỗi khi cập nhật lịch sử giá: {str(e)}", "danger")
                 return redirect(url_for("admin.product_edit", pid=pid))
 
@@ -306,6 +326,7 @@ def product_edit(pid):
             flash("Cập nhật sản phẩm thành công.", "success")
             return redirect(url_for("admin.products"))
         except Exception as e:
+            logger.error(f"Error updating product {pid}: {str(e)}")
             flash(f"Lỗi khi cập nhật sản phẩm: {str(e)}", "danger")
             return redirect(url_for("admin.product_edit", pid=pid))
 
@@ -330,7 +351,7 @@ def product_delete(pid):
         return redirect(url_for("admin.products"))
 
     shop_id = get_shop_id()
-    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+    if session.get("user", {}).get("VaiTro") == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
         flash("Không có quyền xóa sản phẩm này.", "danger")
         return redirect(url_for("admin.products"))
 
@@ -388,7 +409,7 @@ def promotion_delete(promo_id):
 @admin_bp.route("/don-hang")
 @login_required(roles=["admin", "chu_cua_hang", "giao_nhan"])
 def orders():
-    role = session["user"]["VaiTro"]
+    role = session.get("user", {}).get("VaiTro")
     status_filter = request.args.get("status", "")
 
     sql = """SELECT dh.*, nd.HoTen, nd.SoDienThoai FROM DonHang dh
@@ -557,7 +578,7 @@ def order_mark_paid(order_id):
 @admin_bp.route("/don-hang/<int:order_id>/nhan-giao", methods=["POST"])
 @login_required(roles=["giao_nhan", "admin"])
 def order_accept_ship(order_id):
-    shipper = query_one("SELECT MaDonVi FROM DonViGiaoNhan WHERE MaNguoiDung = ?", (session["user_id"],))
+    shipper = query_one("SELECT MaDonVi FROM DonViGiaoNhan WHERE MaNguoiDung = ?", (session.get("user_id"),))
     shipper_id = shipper["MaDonVi"] if shipper and "MaDonVi" in shipper else request.form.get("shipper_id")
 
     existing = query_one("SELECT * FROM VanChuyen WHERE MaDonHang = ? AND MaDonVi IS NOT NULL", (order_id,))
@@ -613,7 +634,7 @@ def user_toggle(uid):
 @admin_bp.route("/thong-ke")
 @login_required(roles=["admin", "chu_cua_hang"])
 def statistics():
-    role = session["user"]["VaiTro"]
+    role = session.get("user", {}).get("VaiTro")
     shop_filter = ""
     params = []
     if role == "chu_cua_hang":
@@ -803,7 +824,7 @@ def product_images(product_id):
         return redirect(url_for("admin.products"))
     
     shop_id = get_shop_id()
-    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+    if session.get("user", {}).get("VaiTro") == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
         flash("Không có quyền quản lý hình ảnh sản phẩm này.", "danger")
         return redirect(url_for("admin.products"))
     
@@ -866,7 +887,7 @@ def set_primary_image(product_id, image_id):
         return redirect(url_for("admin.products"))
     
     shop_id = get_shop_id()
-    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+    if session.get("user", {}).get("VaiTro") == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
         flash("Không có quyền quản lý hình ảnh sản phẩm này.", "danger")
         return redirect(url_for("admin.products"))
     
@@ -899,7 +920,7 @@ def delete_product_image(product_id, image_id):
         return redirect(url_for("admin.products"))
     
     shop_id = get_shop_id()
-    if session["user"]["VaiTro"] == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
+    if session.get("user", {}).get("VaiTro") == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
         flash("Không có quyền quản lý hình ảnh sản phẩm này.", "danger")
         return redirect(url_for("admin.products"))
     

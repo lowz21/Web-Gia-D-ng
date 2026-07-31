@@ -10,7 +10,10 @@ address_bp = Blueprint("address", __name__)
 @address_bp.route("/dia-chi", methods=["GET", "POST"])
 def manage_addresses():
     """Quản lý địa chỉ giao hàng của khách hàng."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để quản lý địa chỉ", "warning")
+        return redirect(url_for("auth.login"))
     
     if request.method == "POST":
         # Thêm địa chỉ mới
@@ -58,7 +61,10 @@ def manage_addresses():
 @address_bp.route("/dia-chi/<int:address_id>/mac-dinh", methods=["POST"])
 def set_default_address(address_id):
     """Đặt địa chỉ làm mặc định."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để quản lý địa chỉ", "warning")
+        return redirect(url_for("auth.login"))
     
     # Kiểm tra địa chỉ thuộc về user
     address = query_one(
@@ -94,7 +100,10 @@ def set_default_address(address_id):
 @address_bp.route("/dia-chi/<int:address_id>/xoa", methods=["POST"])
 def delete_address(address_id):
     """Xóa địa chỉ."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Vui lòng đăng nhập để quản lý địa chỉ", "warning")
+        return redirect(url_for("auth.login"))
     
     # Kiểm tra địa chỉ thuộc về user
     address = query_one(
@@ -121,7 +130,9 @@ def delete_address(address_id):
 @address_bp.route("/api/dia-chi", methods=["GET"])
 def api_addresses():
     """API trả về danh sách địa chỉ của user."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        return {"error": "Unauthorized"}, 401
     addresses = query_all(
         "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? ORDER BY LaMacDinh DESC, NgayTao DESC",
         (user_id,)
@@ -144,7 +155,9 @@ def api_addresses():
 @address_bp.route("/api/dia-chi/mac-dinh", methods=["GET"])
 def api_default_address():
     """API trả về địa chỉ mặc định của user."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        return {"error": "Unauthorized"}, 401
     address = query_one(
         "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? AND LaMacDinh = 1",
         (user_id,)
