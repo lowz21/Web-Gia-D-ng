@@ -285,7 +285,33 @@
           Nhập địa chỉ mới
         </label>
       </div>
-      <textarea class="form-control mt-2" name="address" id="manual-address" placeholder="Nhập địa chỉ giao hàng đầy đủ" style="display:none;"></textarea>
+      <div id="manual-address-section" style="display:none; margin-top: 1rem;">
+        <div class="row g-2">
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="manual_ten_nhan" id="manual_ten_nhan" placeholder="Tên người nhận" required>
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="manual_sdt" id="manual_sdt" placeholder="Số điện thoại" required>
+          </div>
+        </div>
+        <textarea class="form-control mt-2" name="address" id="manual-address" placeholder="Nhập địa chỉ giao hàng đầy đủ" required></textarea>
+        
+        <!-- Save address checkbox -->
+        <div id="save-address-section" style="margin-top: 0.75rem;">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="save_address" id="save_address">
+            <label class="form-check-label" for="save_address">
+              Lưu địa chỉ này để sử dụng cho lần sau
+            </label>
+          </div>
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" name="set_default_address" id="set_default_address">
+            <label class="form-check-label" for="set_default_address">
+              Đặt làm địa chỉ mặc định
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Product Table Section -->
@@ -421,13 +447,17 @@ document.addEventListener('DOMContentLoaded', function() {
   // Handle address type change
   document.querySelectorAll('input[name="address_type"]').forEach(radio => {
     radio.addEventListener('change', function() {
-      const manualInput = document.getElementById('manual-address');
+      const manualSection = document.getElementById('manual-address-section');
       if (this.value === 'manual') {
-        manualInput.style.display = 'block';
-        manualInput.required = true;
+        manualSection.style.display = 'block';
+        document.getElementById('manual_ten_nhan').required = true;
+        document.getElementById('manual_sdt').required = true;
+        document.getElementById('manual-address').required = true;
       } else {
-        manualInput.style.display = 'none';
-        manualInput.required = false;
+        manualSection.style.display = 'none';
+        document.getElementById('manual_ten_nhan').required = false;
+        document.getElementById('manual_sdt').required = false;
+        document.getElementById('manual-address').required = false;
       }
     });
   });
@@ -447,12 +477,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (addressType.value === 'manual') {
       const manualAddress = document.getElementById('manual-address').value;
-      if (!manualAddress.trim()) {
-        showToast('Lỗi', 'Vui lòng nhập địa chỉ giao hàng', 'danger');
+      const manualTenNhan = document.getElementById('manual_ten_nhan').value;
+      const manualSdt = document.getElementById('manual_sdt').value;
+      const saveAddress = document.getElementById('save_address').checked;
+      const setDefaultAddress = document.getElementById('set_default_address').checked;
+      
+      if (!manualAddress.trim() || !manualTenNhan.trim() || !manualSdt.trim()) {
+        showToast('Lỗi', 'Vui lòng nhập đầy đủ thông tin địa chỉ', 'danger');
         return;
       }
       formData.append('address', manualAddress);
+      formData.append('manual_ten_nhan', manualTenNhan);
+      formData.append('manual_sdt', manualSdt);
       formData.append('address_type', 'manual');
+      formData.append('save_address', saveAddress ? '1' : '0');
+      formData.append('set_default_address', setDefaultAddress ? '1' : '0');
     } else {
       formData.append('address_type', addressType.value);
     }

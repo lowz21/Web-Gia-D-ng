@@ -495,11 +495,50 @@ def checkout():
             payment = request.form.get("payment", "COD")
             voucher_code = request.form.get("voucher", "").strip().upper()
             seller_note = request.form.get("seller_note", "").strip()
+            save_address = request.form.get("save_address") == "1"
+            set_default_address = request.form.get("set_default_address") == "1"
             
             # Xử lý địa chỉ - Safe parsing without assuming address_id is integer
             address = ""
             if address_type == "manual":
-                address = request.form.get("address", "").strip()
+                manual_ten_nhan = request.form.get("manual_ten_nhan", "").strip()
+                manual_sdt = request.form.get("manual_sdt", "").strip()
+                manual_address = request.form.get("address", "").strip()
+                
+                # Format full address
+                parts = []
+                if manual_ten_nhan:
+                    parts.append(manual_ten_nhan)
+                if manual_sdt:
+                    parts.append(manual_sdt)
+                parts.append(manual_address)
+                address = " | ".join(parts)
+                
+                # Save address to database if requested
+                if save_address and manual_ten_nhan and manual_sdt and manual_address:
+                    conn = get_db()
+                    try:
+                        # If set as default, remove default from other addresses
+                        if set_default_address:
+                            conn.execute(
+                                "UPDATE DiaChiKhachHang SET LaMacDinh = 0 WHERE MaNguoiDung = ?",
+                                (session["user_id"],)
+                            )
+                        
+                        # Insert new address
+                        conn.execute(
+                            """INSERT INTO DiaChiKhachHang 
+                               (MaNguoiDung, TenNguoiNhan, SoDienThoai, DiaChi, LaMacDinh)
+                               VALUES (?, ?, ?, ?, ?)""",
+                            (session["user_id"], manual_ten_nhan, manual_sdt, manual_address, 1 if set_default_address else 0)
+                        )
+                        conn.commit()
+                        flash("Đã lưu địa chỉ thành công!", "success")
+                    except Exception as e:
+                        conn.rollback()
+                        traceback.print_exc()
+                    finally:
+                        conn.close()
             else:
                 # Lấy địa chỉ từ database - handle both ID and raw text
                 try:
