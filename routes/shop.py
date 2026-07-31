@@ -180,11 +180,11 @@ def product_detail(slug):
     reviews = query_all(
         """SELECT dg.*, nd.HoTen FROM DanhGia dg
            JOIN NguoiDung nd ON dg.MaNguoiDung = nd.MaNguoiDung
-           WHERE dg.MaSanPham = ? ORDER BY dg.NgayDanhGia DESC""",
+           WHERE dg.MaSanPham = ? AND dg.TrangThai = 'hien_thi' ORDER BY dg.NgayTao DESC""",
         (product["MaSanPham"],),
     )
     avg_rating = query_one(
-        "SELECT AVG(SoSao) as avg, COUNT(*) as cnt FROM DanhGia WHERE MaSanPham = ?",
+        "SELECT AVG(SoSao) as avg, COUNT(*) as cnt FROM DanhGia WHERE MaSanPham = ? AND TrangThai = 'hien_thi'",
         (product["MaSanPham"],),
     )
     price, discount = get_effective_price(product)
@@ -197,17 +197,13 @@ def product_detail(slug):
 
     can_review = False
     if session.get("user_id"):
-        bought = query_one(
-            """SELECT 1 FROM ChiTietDonHang ct
-               JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
-               WHERE ct.MaSanPham = ? AND dh.MaKhachHang = ? AND dh.TrangThai = 'da_giao'""",
-            (product["MaSanPham"], session.get("user_id")),
-        )
+        user_id = session.get("user_id")
+        # Allow review if logged in (simplified logic)
         reviewed = query_one(
             "SELECT 1 FROM DanhGia WHERE MaSanPham = ? AND MaNguoiDung = ?",
-            (product["MaSanPham"], session.get("user_id")),
+            (product["MaSanPham"], user_id),
         )
-        can_review = bought and not reviewed
+        can_review = not reviewed
 
     # Lịch sử đổi giá
     price_history = query_all(
@@ -1113,21 +1109,11 @@ def add_review(slug):
         flash("Sản phẩm không tồn tại.", "danger")
         return redirect(url_for("shop.index"))
 
-    stars = int(request.form.get("stars", 0) or 0)
-    content = request.form.get("content", "").strip()
+    so_sao = int(request.form.get("so_sao", 0) or 0)
+    noi_dung = request.form.get("noi_dung", "").strip()
 
-    if stars < 1 or stars > 5:
+    if so_sao < 1 or so_sao > 5:
         flash("Số sao phải từ 1 đến 5.", "warning")
-        return redirect(url_for("shop.product_detail", slug=slug))
-
-    bought = query_one(
-        """SELECT dh.MaDonHang FROM ChiTietDonHang ct
-           JOIN DonHang dh ON ct.MaDonHang = dh.MaDonHang
-           WHERE ct.MaSanPham = ? AND dh.MaKhachHang = ? AND dh.TrangThai = 'da_giao'""",
-        (product["MaSanPham"], user_id),
-    )
-    if not bought:
-        flash("Bạn chưa mua sản phẩm này.", "warning")
         return redirect(url_for("shop.product_detail", slug=slug))
 
     existing = query_one(
@@ -1139,11 +1125,11 @@ def add_review(slug):
         return redirect(url_for("shop.product_detail", slug=slug))
 
     execute(
-        "INSERT INTO DanhGia (MaSanPham, MaNguoiDung, MaDonHang, SoSao, NoiDung) VALUES (?, ?, ?, ?, ?)",
-        (product["MaSanPham"], user_id, bought["MaDonHang"], stars, content),
+        "INSERT INTO DanhGia (MaSanPham, MaNguoiDung, SoSao, NoiDung, TrangThai) VALUES (?, ?, ?, ?, 'hien_thi')",
+        (product["MaSanPham"], user_id, so_sao, noi_dung),
     )
     flash("Gửi đánh giá thành công.", "success")
-    return redirect(url_for("shop.product_detail", slug=slug))
+    return redirect(url_for("shop.product_detail", slug=slug) + "#reviews")
 
 
 @shop_bp.route("/thong-bao")

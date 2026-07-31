@@ -185,6 +185,7 @@ def init_db():
     _migrate_banners(conn)
     _migrate_bang_gia(conn)
     _migrate_user_profile_fields(conn)
+    _migrate_danh_gia(conn)
     conn.commit()
 
     count = conn.execute("SELECT COUNT(*) FROM NguoiDung").fetchone()[0]
@@ -324,6 +325,28 @@ def _migrate_user_profile_fields(conn):
         conn.execute("ALTER TABLE NguoiDung ADD COLUMN GioiTinh VARCHAR(10) DEFAULT 'Khác'")
     if "NgaySinh" not in cols:
         conn.execute("ALTER TABLE NguoiDung ADD COLUMN NgaySinh DATE")
+    conn.commit()
+
+
+def _migrate_danh_gia(conn):
+    """Create DanhGia table if not exists."""
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if "DanhGia" in tables:
+        return
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS DanhGia (
+            MaDanhGia INTEGER PRIMARY KEY AUTOINCREMENT,
+            MaSanPham INTEGER NOT NULL,
+            MaNguoiDung INTEGER NOT NULL,
+            SoSao INTEGER NOT NULL CHECK(SoSao >= 1 AND SoSao <= 5),
+            NoiDung TEXT,
+            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            TrangThai VARCHAR(20) DEFAULT 'hien_thi',
+            FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham),
+            FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
+        )
+    """)
     conn.commit()
 
 

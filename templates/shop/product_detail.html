@@ -78,6 +78,8 @@
       <div class="stars">{% for i in range(5) %}{% if i < (avg_rating.avg|round|int) %}★{% else %}☆{% endif %}{% endfor %}
         <span style="color:#64748b;font-size:.9rem;">({{ avg_rating.cnt }} đánh giá)</span>
       </div>
+      {% else %}
+      <div class="stars">☆☆☆☆☆ <span style="color:#64748b;font-size:.9rem;">(Chưa có đánh giá)</span></div>
       {% endif %}
       <p style="margin:1rem 0;">{{ product.MoTa }}</p>
       <p>Tồn kho: <strong>{{ product.SoLuongTon }}</strong> sản phẩm</p>
@@ -98,24 +100,90 @@
     </div>
   </div>
 
-  <section style="margin-top:3rem;">
+  <section id="reviews" style="margin-top:3rem;">
     <h2>Đánh giá sản phẩm</h2>
+    
+    <!-- Rating Overview Card -->
+    <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;background:linear-gradient(135deg,#fef9c3 0%,#fef08a 100%);">
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <div style="text-align:center;">
+          <div style="font-size:3rem;font-weight:bold;color:#ca8a04;">
+            {% if avg_rating and avg_rating.avg %}{{ avg_rating.avg|round(1) }}{% else %}0.0{% endif %}
+          </div>
+          <div style="font-size:1.2rem;color:#ca8a04;">/ 5 ⭐</div>
+        </div>
+        <div style="flex:1;">
+          <div class="stars" style="font-size:1.5rem;">
+            {% if avg_rating and avg_rating.avg %}
+              {% for i in range(5) %}{% if i < (avg_rating.avg|round|int) %}★{% else %}☆{% endif %}{% endfor %}
+            {% else %}
+              ☆☆☆☆☆
+            {% endif %}
+          </div>
+          <p style="margin:.5rem 0 0;color:#64748b;">
+            {{ avg_rating.cnt if avg_rating and avg_rating.cnt else 0 }} đánh giá từ khách hàng
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Interactive Review Form -->
     {% if can_review %}
-    <form method="post" action="{{ url_for('shop.add_review', slug=product.Slug) }}" class="card" style="padding:1rem;margin-bottom:1rem;">
-      <div class="form-group"><label>Số sao (1-5)</label><input class="form-control" type="number" name="stars" min="1" max="5" required></div>
-      <div class="form-group"><label>Nội dung</label><textarea class="form-control" name="content" required></textarea></div>
+    <form method="post" action="{{ url_for('shop.add_review', slug=product.Slug) }}" class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+      <h3 style="margin-bottom:1rem;">Viết đánh giá của bạn</h3>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label style="font-weight:600;margin-bottom:.5rem;display:block;">Số sao</label>
+        <div class="star-rating" style="display:flex;gap:.25rem;cursor:pointer;">
+          {% for i in range(5) %}
+          <span class="star" data-rating="{{ i + 1 }}" style="font-size:2rem;color:#cbd5e1;transition:color 0.2s;">★</span>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="so_sao" id="selected-rating" value="5" required>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="noi_dung" style="font-weight:600;margin-bottom:.5rem;display:block;">Nội dung đánh giá</label>
+        <textarea class="form-control" id="noi_dung" name="noi_dung" rows="4" placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..." maxlength="500"></textarea>
+        <small style="color:#64748b;">Tối đa 500 ký tự</small>
+      </div>
       <button type="submit" class="btn btn-primary">Gửi đánh giá</button>
     </form>
-    {% endif %}
-    {% for r in reviews %}
-    <div class="card" style="padding:1rem;margin-bottom:.75rem;">
-      <strong>{{ r.HoTen }}</strong> <span class="stars">{% for i in range(r.SoSao) %}★{% endfor %}</span>
-      <p style="margin:.4rem 0 0;">{{ r.NoiDung }}</p>
-      <small style="color:#64748b;">{{ r.NgayDanhGia }}</small>
+    {% elif not session.get("user_id") %}
+    <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;text-align:center;background:#f8f9fa;">
+      <p style="margin-bottom:1rem;">Đăng nhập để viết đánh giá sản phẩm</p>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Đăng nhập</a>
     </div>
     {% else %}
-    <p style="color:#64748b;">Chưa có đánh giá.</p>
-    {% endfor %}
+    <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;text-align:center;background:#f8f9fa;">
+      <p>Bạn đã đánh giá sản phẩm này rồi.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Reviews List -->
+    {% if reviews %}
+    <div style="margin-top:2rem;">
+      <h3 style="margin-bottom:1rem;">Đánh giá từ khách hàng</h3>
+      {% for r in reviews %}
+      <div class="card" style="padding:1.5rem;margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;">
+          <div style="width:40px;height:40px;background:#e2e8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>
+          <div style="flex:1;">
+            <strong>{{ r.HoTen }}</strong>
+            <div class="stars" style="color:#fbbf24;font-size:1rem;">
+              {% for i in range(5) %}{% if i < r.SoSao %}★{% else %}☆{% endif %}{% endfor %}
+            </div>
+          </div>
+          <small style="color:#64748b;">{{ r.NgayTao[:10] if r.NgayTao else '' }}</small>
+        </div>
+        <p style="margin:0;color:#334155;line-height:1.6;">{{ r.NoiDung or 'Khách hàng không để lại bình luận.' }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="padding:2rem;text-align:center;background:#f8f9fa;">
+      <div style="font-size:3rem;margin-bottom:1rem;">💬</div>
+      <p style="color:#64748b;">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+    </div>
+    {% endif %}
   </section>
 
   {% if related %}
@@ -238,6 +306,62 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 150);
                 }
             });
+        });
+    }
+    
+    // Interactive Star Rating
+    const stars = document.querySelectorAll('.star-rating .star');
+    const selectedRating = document.getElementById('selected-rating');
+    
+    if (stars.length > 0 && selectedRating) {
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                selectedRating.value = rating;
+                
+                // Update star colors
+                stars.forEach((s, index) => {
+                    if (index < rating) {
+                        s.style.color = '#fbbf24';
+                    } else {
+                        s.style.color = '#cbd5e1';
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseenter', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                stars.forEach((s, index) => {
+                    if (index < rating) {
+                        s.style.color = '#fbbf24';
+                    } else {
+                        s.style.color = '#cbd5e1';
+                    }
+                });
+            });
+        });
+        
+        // Reset to selected rating on mouse leave
+        const starRatingContainer = document.querySelector('.star-rating');
+        if (starRatingContainer) {
+            starRatingContainer.addEventListener('mouseleave', function() {
+                const selectedValue = parseInt(selectedRating.value);
+                stars.forEach((s, index) => {
+                    if (index < selectedValue) {
+                        s.style.color = '#fbbf24';
+                    } else {
+                        s.style.color = '#cbd5e1';
+                    }
+                });
+            });
+        }
+        
+        // Initialize with default rating
+        const defaultRating = parseInt(selectedRating.value);
+        stars.forEach((s, index) => {
+            if (index < defaultRating) {
+                s.style.color = '#fbbf24';
+            }
         });
     }
 });
