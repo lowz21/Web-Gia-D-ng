@@ -121,15 +121,16 @@ def get_current_price(product_id):
 
 
 def create_price_record(product_id, price, conn=None):
-    """Create a new price record in BangGia table."""
+    """Create a new price record in BangGia table with proper transaction handling."""
     should_close = conn is None
     if conn is None:
         conn = get_db()
     
     try:
-        # Deactivate previous active price
+        # Deactivate previous active price records
         conn.execute(
-            """UPDATE BangGia SET NgayKetThuc = datetime('now'), IsActive = 0
+            """UPDATE BangGia 
+               SET NgayKetThuc = datetime('now'), IsActive = 0
                WHERE MaSanPham = ? AND IsActive = 1 AND NgayKetThuc IS NULL""",
             (product_id,)
         )
@@ -143,6 +144,10 @@ def create_price_record(product_id, price, conn=None):
         
         if should_close:
             conn.commit()
+    except Exception as e:
+        if should_close:
+            conn.rollback()
+        raise e
     finally:
         if should_close:
             conn.close()

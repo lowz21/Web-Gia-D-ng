@@ -247,10 +247,13 @@ def product_add():
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (name, desc, price, orig, stock, slug, meta_title, meta_desc, meta_kw, image_path, cat_id, store_id),
                 )
-                execute(
-                    "INSERT INTO LichSuGia (MaSanPham, GiaCu, GiaMoi, GhiChu) VALUES (?, NULL, ?, 'Giá khởi tạo')",
-                    (pid, price),
-                )
+                # Create initial BangGia record instead of LichSuGia
+                try:
+                    create_price_record(pid, price)
+                except Exception as e:
+                    flash(f"Lỗi khi tạo lịch sử giá: {str(e)}", "danger")
+                    return redirect(url_for("admin.products"))
+                
                 flash("Thêm sản phẩm thành công.", "success")
                 return redirect(url_for("admin.products"))
 
@@ -288,15 +291,23 @@ def product_edit(pid):
         old_price = float(product["GiaBan"])
         if price != old_price:
             # Create new BangGia record instead of LichSuGia
-            create_price_record(pid, price)
+            try:
+                create_price_record(pid, price)
+            except Exception as e:
+                flash(f"Lỗi khi cập nhật lịch sử giá: {str(e)}", "danger")
+                return redirect(url_for("admin.product_edit", pid=pid))
 
-        execute(
-            """UPDATE SanPham SET TenSanPham=?, MoTa=?, GiaBan=?, GiaGoc=?, SoLuongTon=?,
-               MetaTitle=?, MetaDescription=?, MetaKeyword=?, TrangThai=?, MaDanhMuc=? WHERE MaSanPham=?""",
-            (name, desc, price, orig, stock, meta_title, meta_desc, meta_kw, status, cat_id, pid),
-        )
-        flash("Cập nhật sản phẩm thành công.", "success")
-        return redirect(url_for("admin.products"))
+        try:
+            execute(
+                """UPDATE SanPham SET TenSanPham=?, MoTa=?, GiaBan=?, GiaGoc=?, SoLuongTon=?,
+                   MetaTitle=?, MetaDescription=?, MetaKeyword=?, TrangThai=?, MaDanhMuc=? WHERE MaSanPham=?""",
+                (name, desc, price, orig, stock, meta_title, meta_desc, meta_kw, status, cat_id, pid),
+            )
+            flash("Cập nhật sản phẩm thành công.", "success")
+            return redirect(url_for("admin.products"))
+        except Exception as e:
+            flash(f"Lỗi khi cập nhật sản phẩm: {str(e)}", "danger")
+            return redirect(url_for("admin.product_edit", pid=pid))
 
     price_history = get_price_history(pid)
     return render_template(
