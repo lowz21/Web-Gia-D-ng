@@ -176,8 +176,26 @@
     .dropdown-menu.show {
       display: block;
     }
+    .dropdown-menu a {
+      display: block;
+      padding: 12px 16px;
+      color: #333;
+      text-decoration: none;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .dropdown-menu a:last-child {
+      border-bottom: none;
+    }
     .dropdown-menu a:hover {
       background-color: #f5f5f5;
+    }
+    .dropdown-toggle {
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .dropdown-toggle:hover {
+      color: #ee4d2d;
     }
   </style>
   {% block extra_head %}{% endblock %}
@@ -352,8 +370,15 @@
       dropdownToggles.forEach(toggle => {
         toggle.addEventListener('click', function(e) {
           e.preventDefault();
+          e.stopPropagation();
           const dropdown = this.parentElement;
           const menu = dropdown.querySelector('.dropdown-menu');
+          
+          // Close other dropdowns first
+          document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+            if (m !== menu) m.classList.remove('show');
+          });
+          
           menu.classList.toggle('show');
         });
       });
