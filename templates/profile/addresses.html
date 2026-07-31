@@ -1,5 +1,9 @@
 {% extends "profile/layout.html" %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
 {% block profile_content %}
 <div class="card" style="border: 1px solid #e8e8e8; border-radius: 4px;">
   <div class="card-body" style="padding: 2rem;">
@@ -66,6 +70,15 @@
     <div class="modal-body">
       <form id="address-form">
         <input type="hidden" id="address-id" name="address_id">
+        <input type="hidden" id="address-lat" name="latitude">
+        <input type="hidden" id="address-lng" name="longitude">
+        
+        <button type="button" id="btn-locate-me" class="btn btn-outline-primary mb-3" style="width: 100%; margin-bottom: 1rem;">
+          📍 Lấy vị trí hiện tại của tôi
+        </button>
+        
+        <div id="address-map" style="height: 280px; width: 100%; border-radius: 8px; margin-bottom: 1.5rem;"></div>
+        
         <div class="form-group" style="margin-bottom: 1rem;">
           <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Tên người nhận *</label>
           <input type="text" id="address-ten-nhan" name="ten_nhan" class="form-control" required style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
@@ -129,8 +142,11 @@
 }
 </style>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const addressesData = {{ addresses|tojson }};
+let map = null;
+let marker = null;
 
 function showAddAddressModal() {
   document.getElementById('addressModalTitle').textContent = 'Thêm địa chỉ mới';
@@ -139,7 +155,10 @@ function showAddAddressModal() {
   document.getElementById('address-sdt').value = '';
   document.getElementById('address-dia-chi').value = '';
   document.getElementById('address-default').checked = false;
+  document.getElementById('address-lat').value = '';
+  document.getElementById('address-lng').value = '';
   document.getElementById('addressModal').style.display = 'block';
+  initMap();
 }
 
 function editAddress(id) {
@@ -151,12 +170,87 @@ function editAddress(id) {
   document.getElementById('address-sdt').value = address.SoDienThoai || '';
   document.getElementById('address-dia-chi').value = address.DiaChi || '';
   document.getElementById('address-default').checked = address.LaMacDinh === 1;
+  document.getElementById('address-lat').value = address.Latitude || '';
+  document.getElementById('address-lng').value = address.Longitude || '';
   document.getElementById('addressModal').style.display = 'block';
+  initMap();
 }
 
 function closeAddressModal() {
   document.getElementById('addressModal').style.display = 'none';
+  if (map) {
+    map.remove();
+    map = null;
+  }
 }
+
+function initMap() {
+  if (map) {
+    map.remove();
+  }
+  
+  const lat = parseFloat(document.getElementById('address-lat').value) || 10.7769;
+  const lng = parseFloat(document.getElementById('address-lng').value) || 106.7009;
+  
+  map = L.map('address-map').setView([lat, lng], 13);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  
+  marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+  
+  marker.on('dragend', function(e) {
+    const position = marker.getLatLng();
+    document.getElementById('address-lat').value = position.lat;
+    document.getElementById('address-lng').value = position.lng;
+    reverseGeocode(position.lat, position.lng);
+  });
+  
+  map.on('click', function(e) {
+    marker.setLatLng(e.latlng);
+    document.getElementById('address-lat').value = e.latlng.lat;
+    document.getElementById('address-lng').value = e.latlng.lng;
+    reverseGeocode(e.latlng.lat, e.latlng.lng);
+  });
+}
+
+function reverseGeocode(lat, lng) {
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.display_name) {
+        document.getElementById('address-dia-chi').value = data.display_name;
+      }
+    })
+    .catch(error => console.error('Geocoding error:', error));
+}
+
+document.getElementById('btn-locate-me').addEventListener('click', function() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        document.getElementById('address-lat').value = lat;
+        document.getElementById('address-lng').value = lng;
+        
+        if (map && marker) {
+          map.setView([lat, lng], 15);
+          marker.setLatLng([lat, lng]);
+        }
+        
+        reverseGeocode(lat, lng);
+      },
+      function(error) {
+        alert('Không thể lấy vị trí của bạn. Vui lòng kiểm tra quyền truy cập GPS.');
+      }
+    );
+  } else {
+    alert('Trình duyệt của bạn không hỗ trợ định vị GPS.');
+  }
+});
 
 function setDefaultAddress(id) {
   if (confirm('Bạn có chắc muốn đặt địa chỉ này làm mặc định?')) {
@@ -196,6 +290,8 @@ document.getElementById('address-form').addEventListener('submit', function(e) {
   formData.append('sdt', document.getElementById('address-sdt').value);
   formData.append('dia_chi', document.getElementById('address-dia-chi').value);
   formData.append('la_mac_dinh', document.getElementById('address-default').checked ? '1' : '0');
+  formData.append('latitude', document.getElementById('address-lat').value);
+  formData.append('longitude', document.getElementById('address-lng').value);
   
   const addressId = document.getElementById('address-id').value;
   const url = addressId ? '/api/dia-chi/' + addressId + '/sua' : '/api/dia-chi/them';

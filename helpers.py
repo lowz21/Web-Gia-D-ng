@@ -1,10 +1,15 @@
 import re
 import unicodedata
 import logging
+import math
 from functools import wraps
 from flask import session, redirect, url_for, flash, request
 
 logger = logging.getLogger(__name__)
+
+# Store coordinates (Ho Chi Minh City center)
+STORE_LAT = 10.7769
+STORE_LNG = 106.7009
 
 ORDER_STATUS = {
     "pending_payment": "Chờ thanh toán QR (PENDING_PAYMENT)",
@@ -141,3 +146,31 @@ def get_effective_price(product_row):
     except Exception as e:
         logger.error(f"Error in get_effective_price: {str(e)}")
         return 0.0, 0.0
+
+
+def calculate_distance_km(lat1, lon1, lat2, lon2):
+    """Calculates distance in KM between two geographic coordinates using Haversine formula."""
+    try:
+        if None in (lat1, lon1, lat2, lon2):
+            return 0.0
+        R = 6371.0  # Earth radius in km
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = (math.sin(dlat / 2) ** 2 +
+             math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+    except Exception:
+        return 0.0
+
+
+def calculate_shipping_fee(distance_km):
+    """Calculates shipping fee based on distance tier."""
+    if distance_km <= 5.0:
+        return 15000  # Under 5km: 15.000đ
+    elif distance_km <= 15.0:
+        return 30000  # 5-15km: 30.000đ
+    elif distance_km <= 50.0:
+        return 50000  # 15-50km: 50.000đ
+    else:
+        return 80000  # Inter-provincial / long distance: 80.000đ

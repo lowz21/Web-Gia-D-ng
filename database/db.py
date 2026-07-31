@@ -234,23 +234,29 @@ def _migrate_price_history(conn):
 
 
 def _migrate_dia_chi_khach_hang(conn):
-    """Create DiaChiKhachHang table if not exists."""
+    """Create DiaChiKhachHang table if not exists and add lat/lng columns."""
     tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-    if "DiaChiKhachHang" in tables:
-        return
+    if "DiaChiKhachHang" not in tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS DiaChiKhachHang (
+                MaDiaChi INTEGER PRIMARY KEY AUTOINCREMENT,
+                MaNguoiDung INTEGER NOT NULL,
+                TenNguoiNhan VARCHAR(100),
+                SoDienThoai VARCHAR(15),
+                DiaChi VARCHAR(255) NOT NULL,
+                LaMacDinh INTEGER DEFAULT 0,
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
+            )
+        """)
+        conn.commit()
     
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS DiaChiKhachHang (
-            MaDiaChi INTEGER PRIMARY KEY AUTOINCREMENT,
-            MaNguoiDung INTEGER NOT NULL,
-            TenNguoiNhan VARCHAR(100),
-            SoDienThoai VARCHAR(15),
-            DiaChi VARCHAR(255) NOT NULL,
-            LaMacDinh INTEGER DEFAULT 0,
-            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
-        )
-    """)
+    # Add lat/lng columns if not exists
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(DiaChiKhachHang)").fetchall()}
+    if "Latitude" not in cols:
+        conn.execute("ALTER TABLE DiaChiKhachHang ADD COLUMN Latitude FLOAT")
+    if "Longitude" not in cols:
+        conn.execute("ALTER TABLE DiaChiKhachHang ADD COLUMN Longitude FLOAT")
     conn.commit()
 
 

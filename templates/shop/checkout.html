@@ -397,12 +397,12 @@
       
       <div class="summary-row">
         <span>Tổng tiền hàng</span>
-        <span>{{ format_currency(total) }}</span>
+        <span id="subtotal-amount">{{ format_currency(total) }}</span>
       </div>
       
       <div class="summary-row">
         <span>Phí vận chuyển</span>
-        <span>Miễn phí</span>
+        <span id="shipping-fee">Miễn phí</span>
       </div>
       
       <div class="summary-row">
@@ -412,7 +412,7 @@
       
       <div class="summary-row total">
         <span>Tổng thanh toán</span>
-        <span>{{ format_currency(total) }}</span>
+        <span id="total-amount">{{ format_currency(total) }}</span>
       </div>
       
       <button type="submit" form="checkout-form" class="place-order-btn">
@@ -549,7 +549,7 @@ async function loadAddresses() {
               ${badge}
             </div>
             <div class="address-text">${addr.dia_chi}</div>
-            <input type="radio" name="address_type" value="${addr.id}" ${checked} style="margin-top:0.5rem;">
+            <input type="radio" name="address_type" value="${addr.id}" data-lat="${addr.latitude || ''}" data-lng="${addr.longitude || ''}" ${checked} style="margin-top:0.5rem;" onchange="calculateShippingForAddress(this)">
           </div>
         `;
       });
@@ -558,6 +558,11 @@ async function loadAddresses() {
       if (data.addresses.length > 0) {
         document.getElementById('manual-address').style.display = 'none';
         document.getElementById('manual-address').required = false;
+        // Calculate shipping for default address
+        const defaultAddress = document.querySelector('input[name="address_type"]:checked');
+        if (defaultAddress) {
+          calculateShippingForAddress(defaultAddress);
+        }
       }
     } else {
       container.innerHTML = '<p class="text-muted">Bạn chưa có địa chỉ nào. Vui lòng thêm địa chỉ mới hoặc nhập địa chỉ thủ công.</p>';
@@ -568,6 +573,49 @@ async function loadAddresses() {
   } catch (error) {
     console.error('Error loading addresses:', error);
     document.getElementById('saved-addresses').innerHTML = '<p class="text-danger">Không thể tải địa chỉ.</p>';
+  }
+}
+
+async function calculateShippingForAddress(radio) {
+  const lat = radio.getAttribute('data-lat');
+  const lng = radio.getAttribute('data-lng');
+  
+  if (lat && lng) {
+    try {
+      const formData = new FormData();
+      formData.append('latitude', lat);
+      formData.append('longitude', lng);
+      
+      const response = await fetch('/api/calculate-shipping', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        updateShippingFee(data.shipping_fee, data.distance_km);
+      }
+    } catch (error) {
+      console.error('Error calculating shipping:', error);
+    }
+  } else {
+    // Fallback to default shipping fee
+    updateShippingFee(30000, 0);
+  }
+}
+
+function updateShippingFee(shippingFee, distance) {
+  const shippingElement = document.getElementById('shipping-fee');
+  const totalElement = document.getElementById('total-amount');
+  
+  if (shippingElement) {
+    shippingElement.textContent = formatCurrency(shippingFee);
+  }
+  
+  if (totalElement) {
+    const subtotal = parseFloat(document.getElementById('subtotal-amount').textContent.replace(/[^\d.]/g, '')) || 0;
+    const total = subtotal + shippingFee;
+    totalElement.textContent = formatCurrency(total);
   }
 }
 </script>

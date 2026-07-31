@@ -1,7 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, session
-from database.db import query_all, query_one, get_price_history, execute
-from helpers import format_currency, get_effective_price, ORDER_STATUS, login_required
+from helpers import login_required, calculate_distance_km, calculate_shipping_fee, STORE_LAT, STORE_LNG, query_all, query_one, get_price_history, execute, format_currency, get_effective_price, ORDER_STATUS
 from dotenv import load_dotenv
 from services.order_payment import (
     complete_order_payment,
@@ -466,6 +465,8 @@ def api_add_address():
         sdt = request.form.get("sdt", "").strip()
         dia_chi = request.form.get("dia_chi", "").strip()
         la_mac_dinh = request.form.get("la_mac_dinh") == "1"
+        latitude = request.form.get("latitude")
+        longitude = request.form.get("longitude")
         
         if not ten_nhan or not dia_chi:
             return jsonify({"success": False, "message": "Vui lòng điền đầy đủ thông tin"}), 400
@@ -477,11 +478,11 @@ def api_add_address():
                 (user_id,)
             )
         
-        # Insert new address
+        # Insert new address with lat/lng
         execute(
-            """INSERT INTO DiaChiKhachHang (MaNguoiDung, TenNguoiNhan, SoDienThoai, DiaChi, LaMacDinh)
-               VALUES (?, ?, ?, ?, ?)""",
-            (user_id, ten_nhan, sdt, dia_chi, 1 if la_mac_dinh else 0)
+            """INSERT INTO DiaChiKhachHang (MaNguoiDung, TenNguoiNhan, SoDienThoai, DiaChi, LaMacDinh, Latitude, Longitude)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, ten_nhan, sdt, dia_chi, 1 if la_mac_dinh else 0, latitude, longitude)
         )
         
         return jsonify({"success": True, "message": "Thêm địa chỉ thành công"})
@@ -509,6 +510,8 @@ def api_edit_address(address_id):
         sdt = request.form.get("sdt", "").strip()
         dia_chi = request.form.get("dia_chi", "").strip()
         la_mac_dinh = request.form.get("la_mac_dinh") == "1"
+        latitude = request.form.get("latitude")
+        longitude = request.form.get("longitude")
         
         if not ten_nhan or not dia_chi:
             return jsonify({"success": False, "message": "Vui lòng điền đầy đủ thông tin"}), 400
@@ -520,11 +523,11 @@ def api_edit_address(address_id):
                 (user_id, address_id)
             )
         
-        # Update address
+        # Update address with lat/lng
         execute(
-            """UPDATE DiaChiKhachHang SET TenNguoiNhan=?, SoDienThoai=?, DiaChi=?, LaMacDinh=?
+            """UPDATE DiaChiKhachHang SET TenNguoiNhan=?, SoDienThoai=?, DiaChi=?, LaMacDinh=?, Latitude=?, Longitude=?
                WHERE MaDiaChi=?""",
-            (ten_nhan, sdt, dia_chi, 1 if la_mac_dinh else 0, address_id)
+            (ten_nhan, sdt, dia_chi, 1 if la_mac_dinh else 0, latitude, longitude, address_id)
         )
         
         return jsonify({"success": True, "message": "Cập nhật địa chỉ thành công"})
@@ -578,12 +581,44 @@ def api_set_default_address(address_id):
             (user_id,)
         )
         
-        # Set as default
+        # Set this address as default
         execute(
             "UPDATE DiaChiKhachHang SET LaMacDinh = 1 WHERE MaDiaChi = ?",
             (address_id,)
         )
         
         return jsonify({"success": True, "message": "Đặt địa chỉ mặc định thành công"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@api_bp.route("/calculate-shipping", methods=["POST"])
+@login_required()
+def api_calculate_shipping():
+    """API endpoint to calculate shipping fee based on GPS coordinates"""
+    try:
+        latitude = request.form.get("latitude")
+        longitude = request.form.get("longitude")
+        
+        if latitude and longitude:
+            lat = float(latitude)
+            lng = float(longitude)
+            
+            # Calculate distance from store
+            distance_km = calculate_distance_km(STORE_LAT, STORE_LNG, lat, lng)
+            shipping_fee = calculate_shipping_fee(distance_km)
+            
+            return jsonify({
+                "success": True,
+                "distance_km": round(distance_km, 2),
+                "shipping_fee": shipping_fee
+            })
+        else:
+            # Fallback to standard flat rate
+            return jsonify({
+                "success": True,
+                "distance_km": 0,
+                "shipping_fee": 30000  # Default flat rate
+            })
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
