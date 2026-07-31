@@ -47,13 +47,15 @@ def get_product_context():
            ORDER BY sp.MaSanPham DESC"""
     )
     
-    context = "DANH SÁCH SẢN PHẨM ĐỒ GIA DỤNG HIỆN CÓ:\n\n"
+    products_info = []
     for p in products:
         price, disc = get_effective_price(p)
-        stock_status = "Còn hàng" if p['SoLuongTon'] > 0 else "Hết hàng"
-        context += f"- {p['TenSanPham']} ({p['TenDanhMuc']}) - Giá: {format_currency(price)} - Tồn kho: {p['SoLuongTon']} ({stock_status})\n"
+        cat = p.get('TenDanhMuc', 'Đồ gia dụng')
+        name = p.get('TenSanPham', 'Sản phẩm')
+        products_info.append(f"- [{cat}] {name}: {price:,.0f} VNĐ".replace(',', '.'))
     
-    return context
+    catalog_text = "\n".join(products_info) if products_info else "Hiện tại chưa có danh sách sản phẩm."
+    return catalog_text
 
 
 def fallback_chatbot(message):
@@ -116,27 +118,34 @@ def chatbot():
             model = genai.GenerativeModel('gemini-3.6-flash')
             
             # Lấy context sản phẩm
-            product_context = get_product_context()
+            catalog_text = get_product_context()
             
-            # Tạo prompt với context
-            prompt = f"""Bạn là trợ lý tư vấn khách hàng cho sàn TMĐT Gia Dụng Pro chuyên bán đồ gia dụng.
+            # Advanced Sales Consultant System Instructions
+            system_instruction = f"""
+Bạn là Chuyên viên tư vấn bán hàng xuất sắc của cửa hàng 'Gia Dụng Pro'.
+Dưới đây là DANH MỤC TOÀN BỘ SẢN PHẨM hiện có tại cửa hàng (gồm Tên, Danh mục và Giá bán chính xác):
 
-{product_context}
+{catalog_text}
 
-HƯỚNG DẪN:
-- Trả lời ngắn gọn, thân thiện, dưới 500 từ
-- Tư vấn dựa trên danh sách sản phẩm ở trên
-- Nếu khách hỏi về sản phẩm cụ thể, hãy tư vấn đúng sản phẩm đó từ danh sách
-- Nếu khách hỏi về giá, hãy báo giá từ danh sách
-- Nếu khách hỏi về tồn kho, hãy kiểm tra từ danh sách
-- Nếu không có sản phẩm khách hỏi, hãy gợi ý sản phẩm tương tự
-- Luôn khuyến khích khách hàng đặt hàng
+=== QUY TẮC TƯ VẤN BẮT BUỘC ===
+1. KHI KHÁCH HỎI THEO TẦM GIÁ / NGÂN SÁCH (VD: "3 triệu mua được gì?", "dưới 1 triệu có gì?"):
+   - Hãy phân tích ngân sách của khách.
+   - Lọc ra 3 - 5 sản phẩm nổi bật có giá NHỎ HƠN HOẶC BẰNG số tiền khách đưa ra.
+   - Trình bày danh sách rõ ràng (Ghi rõ Tên sản phẩm, Giá bán định dạng VNĐ, và 1 câu lý do nên mua ngắn gọn).
+   - Nếu ngân sách lớn (như 3 triệu), hãy gợi ý mua lẻ sản phẩm cao cấp HOẶC gợi ý combo kết hợp 2-3 món cộng lại vừa tầm ngân sách đó!
+
+2. KHI KHÁCH HỎI VỀ SẢN PHẨM CỤ THỂ HOẶC TÌM KIẾM:
+   - Tra cứu trong danh mục trên, báo giá chuẩn xác và mô tả công dụng.
+
+3. PHONG CÁCH TƯ VẤN:
+   - Thân thiện, xưng "Dạ, Gia Dụng Pro xin chào", trả lời bằng tiếng Việt ngắn gọn, súc tích, trình bày gạch đầu dòng dễ nhìn.
+   - Kết bài bằng 1 câu hỏi gợi mở chốt đơn (VD: "Bạn quan tâm đến mẫu nào để shop hỗ trợ đặt hàng ạ?").
 
 Câu hỏi khách hàng: {message}
 
 Trả lời:"""
             
-            response = model.generate_content(prompt)
+            response = model.generate_content(system_instruction)
             reply = response.text.strip()
             
             if reply:
