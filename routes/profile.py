@@ -104,11 +104,24 @@ def addresses():
         flash("Không tìm thấy thông tin người dùng", "danger")
         return redirect(url_for("auth.login"))
     
-    addresses = query_all(
+    raw_addresses = query_all(
         "SELECT * FROM DiaChiKhachHang WHERE MaNguoiDung = ? ORDER BY LaMacDinh DESC, NgayTao DESC",
         (user_id,)
     )
-    return render_template("profile/addresses.html", addresses=addresses, user=user)
+    
+    # Convert sqlite3.Row objects to standard dictionaries for JSON serialization
+    addresses_list = []
+    if raw_addresses:
+        for addr in raw_addresses:
+            if isinstance(addr, dict):
+                addresses_list.append(addr)
+            elif hasattr(addr, 'keys'): # Handles sqlite3.Row
+                addresses_list.append(dict(addr))
+            else:
+                # Fallback for model instances
+                addresses_list.append({})
+    
+    return render_template("profile/addresses.html", addresses=addresses_list, user=user)
 
 
 @profile_bp.route("/doi-mat-khau", methods=["GET", "POST"])
