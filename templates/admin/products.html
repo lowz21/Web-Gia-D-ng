@@ -111,14 +111,26 @@ async function showPriceHistory(productId) {
   document.getElementById('priceHistoryTitle').textContent = 'Lịch sử giá: ' + productName;
   document.getElementById('priceHistoryModal').style.display = 'block';
   
+  const tbody = document.getElementById('priceHistoryBody');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Đang tải...</td></tr>';
+  
   try {
     const response = await fetch(`/api/san-pham/${productId}/lich-su-gia`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const data = await response.json();
     
-    const tbody = document.getElementById('priceHistoryBody');
     tbody.innerHTML = '';
     
-    if (data.length === 0) {
+    // Check if data contains error
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    if (!data || data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Không có lịch sử giá</td></tr>';
       return;
     }
@@ -140,7 +152,7 @@ async function showPriceHistory(productId) {
     });
   } catch (error) {
     console.error('Error fetching price history:', error);
-    document.getElementById('priceHistoryBody').innerHTML = '<tr><td colspan="4" style="text-align:center;">Lỗi tải dữ liệu</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Lỗi tải dữ liệu: ' + error.message + '</td></tr>';
   }
 }
 

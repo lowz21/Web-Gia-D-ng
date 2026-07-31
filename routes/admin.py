@@ -259,22 +259,36 @@ def product_add():
             if dup:
                 flash("Tên sản phẩm đã tồn tại trong cửa hàng.", "danger")
             else:
-                pid = execute(
-                    """INSERT INTO SanPham (TenSanPham, MoTa, GiaBan, GiaGoc, SoLuongTon, Slug,
-                       MetaTitle, MetaDescription, MetaKeyword, HinhAnh, MaDanhMuc, MaCuaHang)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (name, desc, price, orig, stock, slug, meta_title, meta_desc, meta_kw, image_path, cat_id, store_id),
-                )
-                # Create initial BangGia record instead of LichSuGia
+                # Use a single transaction for both product creation and price history
+                conn = get_db()
                 try:
-                    create_price_record(pid, price)
-                except Exception as e:
-                    logger.error(f"Error creating price record for product {pid}: {str(e)}")
-                    flash(f"Lỗi khi tạo lịch sử giá: {str(e)}", "danger")
+                    # Insert SanPham
+                    cur = conn.execute(
+                        """INSERT INTO SanPham (TenSanPham, MoTa, GiaBan, GiaGoc, SoLuongTon, Slug,
+                           MetaTitle, MetaDescription, MetaKeyword, HinhAnh, MaDanhMuc, MaCuaHang)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (name, desc, price, orig, stock, slug, meta_title, meta_desc, meta_kw, image_path, cat_id, store_id),
+                    )
+                    pid = cur.lastrowid if hasattr(cur, 'lastrowid') else cur.lastrowid
+                    
+                    # Create initial BangGia record
+                    conn.execute(
+                        """INSERT INTO BangGia (MaSanPham, GiaBan, NgayApDung, IsActive, NgayTao)
+                           VALUES (?, ?, datetime('now'), 1, datetime('now'))""",
+                        (pid, price)
+                    )
+                    
+                    conn.commit()
+                    flash("Thêm sản phẩm thành công.", "success")
                     return redirect(url_for("admin.products"))
-                
-                flash("Thêm sản phẩm thành công.", "success")
-                return redirect(url_for("admin.products"))
+                    
+                except Exception as e:
+                    conn.rollback()
+                    logger.error(f"Error creating product: {str(e)}")
+                    flash(f"Lỗi khi tạo sản phẩm: {str(e)}", "danger")
+                    return redirect(url_for("admin.product_add"))
+                finally:
+                    conn.close()
 
     return render_template("admin/product_form.html", product=None, categories=cats, shops=shops, shop_id=shop_id)
 
@@ -308,27 +322,44 @@ def product_edit(pid):
         meta_kw = request.form.get("meta_keyword", "")
 
         old_price = float(product["GiaBan"])
-        if price != old_price:
-            # Create new BangGia record instead of LichSuGia
-            try:
-                create_price_record(pid, price)
-            except Exception as e:
-                logger.error(f"Error updating price record for product {pid}: {str(e)}")
-                flash(f"Lỗi khi cập nhật lịch sử giá: {str(e)}", "danger")
-                return redirect(url_for("admin.product_edit", pid=pid))
-
+        
+        # Use a single transaction for both price history and product update
+        conn = get_db()
         try:
-            execute(
+            if price != old_price:
+                # Deactivate previous active price records
+                conn.execute(
+                    """UPDATE BangGia 
+                       SET NgayKetThuc = datetime('now'), IsActive = 0
+                       WHERE MaSanPham = ? AND IsActive = 1 AND NgayKetThuc IS NULL""",
+                    (pid,)
+                )
+                
+                # Insert new price record
+                conn.execute(
+                    """INSERT INTO BangGia (MaSanPham, GiaBan, NgayApDung, IsActive, NgayTao)
+                       VALUES (?, ?, datetime('now'), 1, datetime('now'))""",
+                    (pid, price)
+                )
+            
+            # Update SanPham with new price and other fields
+            conn.execute(
                 """UPDATE SanPham SET TenSanPham=?, MoTa=?, GiaBan=?, GiaGoc=?, SoLuongTon=?,
                    MetaTitle=?, MetaDescription=?, MetaKeyword=?, TrangThai=?, MaDanhMuc=? WHERE MaSanPham=?""",
                 (name, desc, price, orig, stock, meta_title, meta_desc, meta_kw, status, cat_id, pid),
             )
+            
+            conn.commit()
             flash("Cập nhật sản phẩm thành công.", "success")
             return redirect(url_for("admin.products"))
+            
         except Exception as e:
+            conn.rollback()
             logger.error(f"Error updating product {pid}: {str(e)}")
             flash(f"Lỗi khi cập nhật sản phẩm: {str(e)}", "danger")
             return redirect(url_for("admin.product_edit", pid=pid))
+        finally:
+            conn.close()
 
     price_history = get_price_history(pid)
     return render_template(

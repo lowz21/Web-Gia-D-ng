@@ -422,8 +422,22 @@ def api_product_price_history(product_id):
     """API endpoint to get price history for a product"""
     try:
         price_history = get_price_history(product_id)
-        return jsonify(price_history)
+        
+        # Format the data for the frontend
+        formatted_history = []
+        for record in price_history:
+            formatted_history.append({
+                'MaBangGia': record.get('MaBangGia'),
+                'GiaBan': float(record.get('GiaBan', 0)),
+                'NgayApDung': record.get('NgayApDung'),
+                'NgayKetThuc': record.get('NgayKetThuc'),
+                'IsActive': record.get('IsActive', 0)
+            })
+        
+        return jsonify(formatted_history)
     except Exception as e:
+        logger = __import__('logging').getLogger(__name__)
+        logger.error(f"Price History API Error for product {product_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
