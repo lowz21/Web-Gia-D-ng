@@ -57,41 +57,52 @@
                         </svg>
                     </button>
 
-                    {% if banners %}
-                    {% for banner in banners %}
-                    <div class="hero-slide {% if loop.first %}active{% endif %}" data-index="{{ loop.index - 1 }}">
-                        <img src="{{ banner.URL }}" alt="{{ banner.TieuDe }}" class="hero-slide-image">
-                        <div class="hero-slide-content">
-                            <h2>{{ banner.TieuDe }}</h2>
-                            <p>{{ banner.MoTa }}</p>
-                            {% if banner.Link %}
-                            <a href="{{ banner.Link }}" class="btn btn-hero">Xem ngay</a>
-                            {% else %}
-                            <a href="{{ url_for('shop.shop') }}" class="btn btn-hero">Mua sắm ngay</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% else %}
+                    <!-- Banner 1: Siêu Sale Gia Dụng -->
                     <div class="hero-slide active" data-index="0">
-                        <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=500&fit=crop" alt="Gia Dụng Pro" class="hero-slide-image">
+                        <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=500&fit=crop" alt="Siêu Sale Gia Dụng" class="hero-slide-image">
                         <div class="hero-slide-content">
-                            <h2>Gia Dụng Pro</h2>
-                            <p>Chuyên cung cấp đồ gia dụng cao cấp, chính hãng</p>
+                            <h2>🔥 Siêu Sale Gia Dụng</h2>
+                            <p>Giảm giá đến 50% cho đồ dùng nhà bếp cao cấp</p>
                             <a href="{{ url_for('shop.shop') }}" class="btn btn-hero">Mua sắm ngay</a>
                         </div>
                     </div>
-                    {% endif %}
+
+                    <!-- Banner 2: Điện Máy - Điện Lạnh -->
+                    <div class="hero-slide" data-index="1">
+                        <img src="https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=1200&h=500&fit=crop" alt="Điện Máy - Điện Lạnh" class="hero-slide-image">
+                        <div class="hero-slide-content">
+                            <h2>❄️ Điện Máy - Điện Lạnh</h2>
+                            <p>Ưu đãi đặc biệt cho tủ lạnh, máy giặt & điều hòa</p>
+                            <a href="{{ url_for('shop.shop') }}" class="btn btn-hero">Xem ưu đãi</a>
+                        </div>
+                    </div>
+
+                    <!-- Banner 3: Gia Dụng Thông Minh -->
+                    <div class="hero-slide" data-index="2">
+                        <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=500&fit=crop" alt="Gia Dụng Thông Minh" class="hero-slide-image">
+                        <div class="hero-slide-content">
+                            <h2>🏠 Gia Dụng Thông Minh</h2>
+                            <p>Thiết bị nhà thông minh - Bảo hành miễn phí & Giao hàng nhanh</p>
+                            <a href="{{ url_for('shop.shop') }}" class="btn btn-hero">Khám phá ngay</a>
+                        </div>
+                    </div>
+
+                    <!-- Banner 4: Bếp Từ & Dụng Cụ Bếp -->
+                    <div class="hero-slide" data-index="3">
+                        <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=1200&h=500&fit=crop" alt="Bếp Từ & Dụng Cụ Bếp" class="hero-slide-image">
+                        <div class="hero-slide-content">
+                            <h2>🍳 Bếp Từ & Dụng Cụ Bếp</h2>
+                            <p>Combo ưu đãi cho gian bếp hiện đại của bạn</p>
+                            <a href="{{ url_for('shop.shop') }}" class="btn btn-hero">Mua ngay</a>
+                        </div>
+                    </div>
 
                     <!-- Indicator Dots -->
                     <div class="slider-indicators" id="sliderIndicators">
-                        {% if banners %}
-                        {% for banner in banners %}
-                        <button class="slider-dot {% if loop.first %}active{% endif %}" data-index="{{ loop.index - 1 }}"></button>
-                        {% endfor %}
-                        {% else %}
                         <button class="slider-dot active" data-index="0"></button>
-                        {% endif %}
+                        <button class="slider-dot" data-index="1"></button>
+                        <button class="slider-dot" data-index="2"></button>
+                        <button class="slider-dot" data-index="3"></button>
                     </div>
                 </div>
                 
