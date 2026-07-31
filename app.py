@@ -24,12 +24,14 @@ def create_app():
     from routes.shop import shop_bp
     from routes.api import api_bp
     from routes.address import address_bp
+    from routes.profile import profile_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(shop_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(address_bp)
+    app.register_blueprint(profile_bp, url_prefix="/tai-khoan")
 
     # Start scheduler only on Render (not on Vercel serverless)
     # Vercel uses cron jobs via API endpoint instead

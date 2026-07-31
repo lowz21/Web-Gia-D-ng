@@ -1,7 +1,7 @@
 import os
 from flask import Blueprint, request, jsonify, session
-from database.db import query_all, query_one, get_price_history
-from helpers import format_currency, get_effective_price, ORDER_STATUS
+from database.db import query_all, query_one, get_price_history, execute
+from helpers import format_currency, get_effective_price, ORDER_STATUS, login_required
 from dotenv import load_dotenv
 from services.order_payment import (
     complete_order_payment,
@@ -425,3 +425,136 @@ def api_product_price_history(product_id):
         return jsonify(price_history)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/dia-chi/them", methods=["POST"])
+@login_required()
+def api_add_address():
+    """API endpoint to add a new address"""
+    try:
+        user_id = session["user_id"]
+        ten_nhan = request.form.get("ten_nhan", "").strip()
+        sdt = request.form.get("sdt", "").strip()
+        dia_chi = request.form.get("dia_chi", "").strip()
+        la_mac_dinh = request.form.get("la_mac_dinh") == "1"
+        
+        if not ten_nhan or not dia_chi:
+            return jsonify({"success": False, "message": "Vui lòng điền đầy đủ thông tin"}), 400
+        
+        # If setting as default, remove default from other addresses
+        if la_mac_dinh:
+            execute(
+                "UPDATE DiaChiKhachHang SET LaMacDinh = 0 WHERE MaNguoiDung = ?",
+                (user_id,)
+            )
+        
+        # Insert new address
+        execute(
+            """INSERT INTO DiaChiKhachHang (MaNguoiDung, TenNguoiNhan, SoDienThoai, DiaChi, LaMacDinh)
+               VALUES (?, ?, ?, ?, ?)""",
+            (user_id, ten_nhan, sdt, dia_chi, 1 if la_mac_dinh else 0)
+        )
+        
+        return jsonify({"success": True, "message": "Thêm địa chỉ thành công"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@api_bp.route("/dia-chi/<int:address_id>/sua", methods=["POST"])
+@login_required()
+def api_edit_address(address_id):
+    """API endpoint to edit an address"""
+    try:
+        user_id = session["user_id"]
+        
+        # Check if address belongs to user
+        address = query_one(
+            "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
+            (address_id, user_id)
+        )
+        
+        if not address:
+            return jsonify({"success": False, "message": "Địa chỉ không tồn tại"}), 404
+        
+        ten_nhan = request.form.get("ten_nhan", "").strip()
+        sdt = request.form.get("sdt", "").strip()
+        dia_chi = request.form.get("dia_chi", "").strip()
+        la_mac_dinh = request.form.get("la_mac_dinh") == "1"
+        
+        if not ten_nhan or not dia_chi:
+            return jsonify({"success": False, "message": "Vui lòng điền đầy đủ thông tin"}), 400
+        
+        # If setting as default, remove default from other addresses
+        if la_mac_dinh:
+            execute(
+                "UPDATE DiaChiKhachHang SET LaMacDinh = 0 WHERE MaNguoiDung = ? AND MaDiaChi != ?",
+                (user_id, address_id)
+            )
+        
+        # Update address
+        execute(
+            """UPDATE DiaChiKhachHang SET TenNguoiNhan=?, SoDienThoai=?, DiaChi=?, LaMacDinh=?
+               WHERE MaDiaChi=?""",
+            (ten_nhan, sdt, dia_chi, 1 if la_mac_dinh else 0, address_id)
+        )
+        
+        return jsonify({"success": True, "message": "Cập nhật địa chỉ thành công"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@api_bp.route("/dia-chi/<int:address_id>/xoa", methods=["POST"])
+@login_required()
+def api_delete_address(address_id):
+    """API endpoint to delete an address"""
+    try:
+        user_id = session["user_id"]
+        
+        # Check if address belongs to user
+        address = query_one(
+            "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
+            (address_id, user_id)
+        )
+        
+        if not address:
+            return jsonify({"success": False, "message": "Địa chỉ không tồn tại"}), 404
+        
+        # Delete address
+        execute("DELETE FROM DiaChiKhachHang WHERE MaDiaChi = ?", (address_id,))
+        
+        return jsonify({"success": True, "message": "Xóa địa chỉ thành công"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@api_bp.route("/dia-chi/<int:address_id>/mac-dinh", methods=["POST"])
+@login_required()
+def api_set_default_address(address_id):
+    """API endpoint to set an address as default"""
+    try:
+        user_id = session["user_id"]
+        
+        # Check if address belongs to user
+        address = query_one(
+            "SELECT * FROM DiaChiKhachHang WHERE MaDiaChi = ? AND MaNguoiDung = ?",
+            (address_id, user_id)
+        )
+        
+        if not address:
+            return jsonify({"success": False, "message": "Địa chỉ không tồn tại"}), 404
+        
+        # Remove default from all addresses
+        execute(
+            "UPDATE DiaChiKhachHang SET LaMacDinh = 0 WHERE MaNguoiDung = ?",
+            (user_id,)
+        )
+        
+        # Set as default
+        execute(
+            "UPDATE DiaChiKhachHang SET LaMacDinh = 1 WHERE MaDiaChi = ?",
+            (address_id,)
+        )
+        
+        return jsonify({"success": True, "message": "Đặt địa chỉ mặc định thành công"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500

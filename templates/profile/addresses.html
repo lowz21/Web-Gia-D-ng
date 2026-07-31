@@ -1,0 +1,224 @@
+{% extends "profile/layout.html" %}
+
+{% block profile_content %}
+<div class="card" style="border: 1px solid #e8e8e8; border-radius: 4px;">
+  <div class="card-body" style="padding: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <div>
+        <h2 style="margin-bottom: 0.5rem; color: #333; font-size: 1.5rem;">Sổ địa chỉ</h2>
+        <p style="color: #757575; margin: 0;">Quản lý các địa chỉ giao hàng của bạn</p>
+      </div>
+      <button onclick="showAddAddressModal()" class="btn" style="background-color: #ee4d2d; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; font-weight: 500;">
+        + Thêm địa chỉ mới
+      </button>
+    </div>
+    
+    {% if addresses %}
+    <div class="row">
+      {% for addr in addresses %}
+      <div class="col-md-6" style="margin-bottom: 1.5rem;">
+        <div class="card" style="border: 1px solid #e8e8e8; border-radius: 4px; {% if addr.LaMacDinh %}border-color: #ee4d2d; border-width: 2px;{% endif %}">
+          <div class="card-body" style="padding: 1.5rem;">
+            {% if addr.LaMacDinh %}
+            <span class="badge" style="background-color: #ee4d2d; color: white; position: absolute; top: 1rem; right: 1rem; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem;">Mặc định</span>
+            {% endif %}
+            
+            <h5 style="margin-bottom: 0.5rem; color: #333;">{{ addr.TenNguoiNhan or 'Không có tên' }}</h5>
+            <p style="color: #757575; margin-bottom: 0.5rem;">{{ addr.SoDienThoai or 'Không có SĐT' }}</p>
+            <p style="color: #333; margin-bottom: 1rem;">{{ addr.DiaChi }}</p>
+            
+            <div style="display: flex; gap: 0.5rem;">
+              {% if not addr.LaMacDinh %}
+              <button onclick="setDefaultAddress({{ addr.MaDiaChi }})" class="btn btn-sm" style="background-color: white; color: #ee4d2d; border: 1px solid #ee4d2d; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem;">
+                Đặt mặc định
+              </button>
+              {% endif %}
+              <button onclick="editAddress({{ addr.MaDiaChi }})" class="btn btn-sm" style="background-color: white; color: #333; border: 1px solid #e8e8e8; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem;">
+                Sửa
+              </button>
+              <button onclick="deleteAddress({{ addr.MaDiaChi }})" class="btn btn-sm" style="background-color: white; color: #ee4d2d; border: 1px solid #e8e8e8; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem;">
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; background-color: #f9f9f9; border-radius: 4px;">
+      <p style="color: #757575; font-size: 1.1rem; margin-bottom: 1.5rem;">Bạn chưa có địa chỉ giao hàng nào</p>
+      <button onclick="showAddAddressModal()" class="btn" style="background-color: #ee4d2d; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; font-weight: 500;">
+        + Thêm địa chỉ mới
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Add/Edit Address Modal -->
+<div id="addressModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 id="addressModalTitle">Thêm địa chỉ mới</h3>
+      <span class="close" onclick="closeAddressModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <form id="address-form">
+        <input type="hidden" id="address-id" name="address_id">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Tên người nhận *</label>
+          <input type="text" id="address-ten-nhan" name="ten_nhan" class="form-control" required style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Số điện thoại *</label>
+          <input type="tel" id="address-sdt" name="sdt" class="form-control" required style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Địa chỉ *</label>
+          <textarea id="address-dia-chi" name="dia_chi" class="form-control" rows="3" required style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px; resize: vertical;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label style="display: flex; align-items: center; cursor: pointer;">
+            <input type="checkbox" id="address-default" name="la_mac_dinh" style="margin-right: 0.5rem;">
+            Đặt làm địa chỉ mặc định
+          </label>
+        </div>
+        <button type="submit" class="btn" style="background-color: #ee4d2d; color: white; padding: 0.75rem 2rem; border: none; border-radius: 4px; font-weight: 500; width: 100%;">
+          Lưu địa chỉ
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+  background-color: white;
+  margin: 10% auto;
+  padding: 2rem;
+  border-radius: 8px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e8e8e8;
+  padding-bottom: 1rem;
+}
+.close {
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #999;
+}
+.close:hover {
+  color: #333;
+}
+</style>
+
+<script>
+const addressesData = {{ addresses|tojson }};
+
+function showAddAddressModal() {
+  document.getElementById('addressModalTitle').textContent = 'Thêm địa chỉ mới';
+  document.getElementById('address-id').value = '';
+  document.getElementById('address-ten-nhan').value = '';
+  document.getElementById('address-sdt').value = '';
+  document.getElementById('address-dia-chi').value = '';
+  document.getElementById('address-default').checked = false;
+  document.getElementById('addressModal').style.display = 'block';
+}
+
+function editAddress(id) {
+  const address = addressesData.find(a => a.MaDiaChi === id);
+  
+  document.getElementById('addressModalTitle').textContent = 'Sửa địa chỉ';
+  document.getElementById('address-id').value = id;
+  document.getElementById('address-ten-nhan').value = address.TenNguoiNhan || '';
+  document.getElementById('address-sdt').value = address.SoDienThoai || '';
+  document.getElementById('address-dia-chi').value = address.DiaChi || '';
+  document.getElementById('address-default').checked = address.LaMacDinh === 1;
+  document.getElementById('addressModal').style.display = 'block';
+}
+
+function closeAddressModal() {
+  document.getElementById('addressModal').style.display = 'none';
+}
+
+function setDefaultAddress(id) {
+  if (confirm('Bạn có chắc muốn đặt địa chỉ này làm mặc định?')) {
+    fetch('/api/dia-chi/' + id + '/mac-dinh', {
+      method: 'POST'
+    }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Có lỗi xảy ra: ' + data.message);
+      }
+    });
+  }
+}
+
+function deleteAddress(id) {
+  if (confirm('Bạn có chắc muốn xóa địa chỉ này?')) {
+    fetch('/api/dia-chi/' + id + '/xoa', {
+      method: 'POST'
+    }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Có lỗi xảy ra: ' + data.message);
+      }
+    });
+  }
+}
+
+document.getElementById('address-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData();
+  formData.append('ten_nhan', document.getElementById('address-ten-nhan').value);
+  formData.append('sdt', document.getElementById('address-sdt').value);
+  formData.append('dia_chi', document.getElementById('address-dia-chi').value);
+  formData.append('la_mac_dinh', document.getElementById('address-default').checked ? '1' : '0');
+  
+  const addressId = document.getElementById('address-id').value;
+  const url = addressId ? '/api/dia-chi/' + addressId + '/sua' : '/api/dia-chi/them';
+  
+  fetch(url, {
+    method: 'POST',
+    body: formData
+  }).then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Có lỗi xảy ra: ' + data.message);
+    }
+  });
+});
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const modal = document.getElementById('addressModal');
+  if (event.target == modal) {
+    closeAddressModal();
+  }
+}
+</script>
+{% endblock %}

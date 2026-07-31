@@ -1,0 +1,62 @@
+{% extends "shop/layout.html" %}
+
+{% block title %}Tài khoản của tôi{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin-top: 2rem; margin-bottom: 3rem;">
+  <div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-md-3">
+      <div class="card" style="border: 1px solid #e8e8e8; border-radius: 4px;">
+        <div class="card-body" style="padding: 1.5rem;">
+          <!-- User Avatar & Info -->
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; margin: 0 auto 1rem; border: 2px solid #ee4d2d;">
+              {% if user.Avatar and user.Avatar != 'default-avatar.png' %}
+                <img src="{{ url_for('static', filename='uploads/avatars/' + user.Avatar) }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">
+                  {{ user.HoTen[0] if user.HoTen else 'U' }}
+                </div>
+              {% endif %}
+            </div>
+            <h5 style="margin: 0; color: #333;">{{ user.HoTen }}</h5>
+            <small style="color: #757575;">{{ user.Email }}</small>
+          </div>
+          
+          <!-- Navigation Menu -->
+          <nav class="nav flex-column">
+            <a class="nav-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" href="{{ url_for('profile.profile') }}" style="color: #333; padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0;">
+              <span style="margin-right: 0.5rem;">👤</span> Hồ sơ của tôi
+            </a>
+            <a class="nav-link {% if request.endpoint == 'profile.addresses' %}active{% endif %}" href="{{ url_for('profile.addresses') }}" style="color: #333; padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0;">
+              <span style="margin-right: 0.5rem;">📍</span> Sổ địa chỉ
+            </a>
+            <a class="nav-link {% if request.endpoint == 'profile.change_password' %}active{% endif %}" href="{{ url_for('profile.change_password') }}" style="color: #333; padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0;">
+              <span style="margin-right: 0.5rem;">🔑</span> Đổi mật khẩu
+            </a>
+            <a class="nav-link" href="{{ url_for('shop.my_orders') }}" style="color: #333; padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0;">
+              <span style="margin-right: 0.5rem;">📦</span> Đơn mua
+            </a>
+          </nav>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+      {% block profile_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<style>
+.nav-link.active {
+  color: #ee4d2d !important;
+  font-weight: 600;
+}
+.nav-link:hover {
+  color: #ee4d2d;
+}
+</style>
+{% endblock %}

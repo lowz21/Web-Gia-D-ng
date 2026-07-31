@@ -1,0 +1,109 @@
+{% extends "profile/layout.html" %}
+
+{% block profile_content %}
+<div class="card" style="border: 1px solid #e8e8e8; border-radius: 4px;">
+  <div class="card-body" style="padding: 2rem;">
+    <h2 style="margin-bottom: 0.5rem; color: #333; font-size: 1.5rem;">Hồ sơ của tôi</h2>
+    <p style="color: #757575; margin-bottom: 2rem;">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
+    
+    <form method="POST" enctype="multipart/form-data" id="profile-form">
+      <div class="row">
+        <!-- Left Column - Form Fields -->
+        <div class="col-md-8">
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Tên đăng nhập</label>
+            <input type="text" class="form-control" value="{{ user.Email }}" disabled style="background-color: #f5f5f5; border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Tên / Họ tên</label>
+            <input type="text" name="ho_ten" class="form-control" value="{{ user.HoTen or '' }}" required style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Email</label>
+            <input type="email" name="email" class="form-control" value="{{ user.Email }}" required style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Số điện thoại</label>
+            <input type="tel" name="sdt" class="form-control" value="{{ user.SoDienThoai or '' }}" style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Giới tính</label>
+            <div style="display: flex; gap: 2rem;">
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="gioi_tinh" value="Nam" {% if user.GioiTinh == 'Nam' %}checked{% endif %} style="margin-right: 0.5rem;">
+                Nam
+              </label>
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="gioi_tinh" value="Nữ" {% if user.GioiTinh == 'Nữ' %}checked{% endif %} style="margin-right: 0.5rem;">
+                Nữ
+              </label>
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="gioi_tinh" value="Khác" {% if user.GioiTinh == 'Khác' or not user.GioiTinh %}checked{% endif %} style="margin-right: 0.5rem;">
+                Khác
+              </label>
+            </div>
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 2rem;">
+            <label style="color: #333; font-weight: 500; margin-bottom: 0.5rem;">Ngày sinh</label>
+            <input type="date" name="ngay_sinh" class="form-control" value="{{ user.NgaySinh or '' }}" style="border: 1px solid #e8e8e8; padding: 0.75rem; border-radius: 4px;">
+          </div>
+          
+          <button type="submit" class="btn" style="background-color: #ee4d2d; color: white; padding: 0.75rem 2rem; border: none; border-radius: 4px; font-weight: 500;">
+            Lưu
+          </button>
+        </div>
+        
+        <!-- Right Column - Avatar Upload -->
+        <div class="col-md-4">
+          <div style="text-align: center; padding: 2rem; border: 1px solid #e8e8e8; border-radius: 4px;">
+            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; margin: 0 auto 1.5rem; border: 3px solid #ee4d2d; background-color: #f5f5f5;">
+              <img id="avatar-preview" src="{% if user.Avatar and user.Avatar != 'default-avatar.png' %}{{ url_for('static', filename='uploads/avatars/' + user.Avatar) }}{% else %}data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23f5f5f5' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' font-size='40' fill='%23ccc'%3E{{ user.HoTen[0] if user.HoTen else 'U' }}%3C/text%3E%3C/svg%3E{% endif %}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <input type="file" name="avatar" id="avatar-input" accept=".jpg,.jpeg,.png" style="display: none;">
+            <button type="button" onclick="document.getElementById('avatar-input').click()" style="background-color: white; color: #ee4d2d; border: 1px solid #ee4d2d; padding: 0.5rem 1.5rem; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              Chọn ảnh
+            </button>
+            <p style="color: #757575; font-size: 0.875rem; margin-top: 1rem; margin-bottom: 0;">
+              Dung lượng file tối đa 2 MB<br>
+              Định dạng: .JPG, .PNG
+            </p>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.getElementById('avatar-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Kích thước file không được vượt quá 2MB');
+      e.target.value = '';
+      return;
+    }
+    
+    // Check file type
+    if (!file.type.match('image/jpeg') && !file.type.match('image/png') && !file.type.match('image/jpg')) {
+      alert('Chỉ chấp nhận file định dạng .JPG, .PNG');
+      e.target.value = '';
+      return;
+    }
+    
+    // Preview image
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('avatar-preview').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+</script>
+{% endblock %}

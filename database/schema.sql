@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS NguoiDung (
     MatKhau VARCHAR(255) NOT NULL,
     SoDienThoai VARCHAR(15),
     VaiTro VARCHAR(20) NOT NULL DEFAULT 'khach_hang',
-    TrangThai VARCHAR(20) NOT NULL DEFAULT 'hoat_dong'
+    TrangThai VARCHAR(20) NOT NULL DEFAULT 'hoat_dong',
+    Avatar VARCHAR(255) DEFAULT 'default-avatar.png',
+    GioiTinh VARCHAR(10) DEFAULT 'Khác',
+    NgaySinh DATE
 );
 
 CREATE TABLE IF NOT EXISTS CuaHang (

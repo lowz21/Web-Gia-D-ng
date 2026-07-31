@@ -177,6 +177,7 @@ def init_db():
     _migrate_product_images(conn)
     _migrate_banners(conn)
     _migrate_bang_gia(conn)
+    _migrate_user_profile_fields(conn)
     conn.commit()
 
     count = conn.execute("SELECT COUNT(*) FROM NguoiDung").fetchone()[0]
@@ -304,6 +305,18 @@ def _migrate_bang_gia(conn):
             FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham)
         )
     """)
+    conn.commit()
+
+
+def _migrate_user_profile_fields(conn):
+    """Add profile fields to NguoiDung table if not exists."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(NguoiDung)").fetchall()}
+    if "Avatar" not in cols:
+        conn.execute("ALTER TABLE NguoiDung ADD COLUMN Avatar VARCHAR(255) DEFAULT 'default-avatar.png'")
+    if "GioiTinh" not in cols:
+        conn.execute("ALTER TABLE NguoiDung ADD COLUMN GioiTinh VARCHAR(10) DEFAULT 'Khác'")
+    if "NgaySinh" not in cols:
+        conn.execute("ALTER TABLE NguoiDung ADD COLUMN NgaySinh DATE")
     conn.commit()
 
 
