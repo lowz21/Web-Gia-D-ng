@@ -76,32 +76,81 @@ def format_currency(value):
         return "0đ"
 
 
+def get_product_id_safe(product_row):
+    """Safely extract product ID from dict, sqlite3.Row, or model instance."""
+    if not product_row:
+        return None
+        
+    # If it's a dict or sqlite3.Row
+    if isinstance(product_row, dict) or hasattr(product_row, 'keys'):
+        keys = list(product_row.keys()) if hasattr(product_row, 'keys') else []
+        for key in ['MaSanPham', 'id', 'san_pham_id', 'id_san_pham', 'masanpham', 'ID']:
+            if key in keys or (isinstance(product_row, dict) and key in product_row):
+                return product_row[key]
+        # Fallback to first column value if available
+        try:
+            return product_row[0]
+        except Exception:
+            pass
+
+    # If it's an object/model instance
+    for attr in ['MaSanPham', 'id', 'san_pham_id', 'id_san_pham']:
+        if hasattr(product_row, attr):
+            return getattr(product_row, attr)
+
+    return None
+
+
 def get_effective_price(product_row, promotions=None):
-    from database.db import get_current_price
-    
-    # Try to get current price from BangGia table first
-    current_price = get_current_price(product_row["MaSanPham"])
-    
-    # Fallback to GiaBan if BangGia doesn't have price
-    if current_price is None:
-        price = float(product_row["GiaBan"])
-    else:
-        price = float(current_price)
-    
-    if promotions is None:
-        from database.db import query_all
-        today = __import__("datetime").date.today().isoformat()
-        promotions = query_all(
-            """SELECT * FROM KhuyenMai
-               WHERE TrangThai = 'hoat_dong'
-               AND date(NgayBatDau) <= date(?)
-               AND date(NgayKetThuc) >= date(?)
-               AND (MaSanPham IS NULL OR MaSanPham = ?)""",
-            (today, today, product_row["MaSanPham"]),
-        )
-    discount = 0
-    for promo in promotions:
-        discount = max(discount, int(promo["PhanTramGiam"]))
-    if discount:
-        return round(price * (100 - discount) / 100, 0), discount
-    return price, 0
+    """Safely calculate product effective price without crashing."""
+    try:
+        from database.db import get_current_price, query_all
+        
+        # Safely extract product ID
+        product_id = get_product_id_safe(product_row)
+        
+        # Try to get current price from BangGia table first
+        current_price = None
+        if product_id:
+            current_price = get_current_price(product_id)
+        
+        # Fallback to GiaBan if BangGia doesn't have price
+        if current_price is None:
+            # Try multiple possible key names for price
+            price = 0.0
+            if isinstance(product_row, dict) or hasattr(product_row, 'keys'):
+                price = product_row.get('GiaBan') or product_row.get('gia_ban') or product_row.get('gia') or product_row.get('Gia') or 0.0
+            elif hasattr(product_row, 'gia_ban'):
+                price = getattr(product_row, 'gia_ban', 0.0)
+            elif hasattr(product_row, 'GiaBan'):
+                price = getattr(product_row, 'GiaBan', 0.0)
+            price = float(price) if price else 0.0
+        else:
+            price = float(current_price)
+        
+        if promotions is None:
+            today = __import__("datetime").date.today().isoformat()
+            if product_id:
+                promotions = query_all(
+                    """SELECT * FROM KhuyenMai
+                       WHERE TrangThai = 'hoat_dong'
+                       AND date(NgayBatDau) <= date(?)
+                       AND date(NgayKetThuc) >= date(?)
+                       AND (MaSanPham IS NULL OR MaSanPham = ?)""",
+                    (today, today, product_id),
+                )
+            else:
+                promotions = []
+        
+        discount = 0
+        for promo in promotions:
+            promo_discount = promo.get('PhanTramGiam') if isinstance(promo, dict) else getattr(promo, 'PhanTramGiam', 0)
+            discount = max(discount, int(promo_discount) if promo_discount else 0)
+        
+        if discount:
+            return round(price * (100 - discount) / 100, 0), discount
+        return price, 0
+
+    except Exception as e:
+        print(f"Error in get_effective_price: {str(e)}")
+        return 0.0, 0
