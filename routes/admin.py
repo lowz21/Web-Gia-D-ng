@@ -227,7 +227,7 @@ def product_add():
         meta_kw = request.form.get("meta_keyword", "")
         slug = slugify(name)
         
-        # Xử lý upload hình ảnh
+        # Xử lý upload hình ảnh với cloud storage fallback
         image_file = request.files.get('image')
         image_path = None
         
@@ -235,15 +235,24 @@ def product_add():
             if not allowed_file(image_file.filename):
                 flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
             else:
-                # Tạo thư mục upload nếu chưa tồn tại
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                # Đổi tên file an toàn
-                filename = secure_filename(f"{slug}_{image_file.filename}")
-                # Lưu file
-                image_path = os.path.join(UPLOAD_FOLDER, filename)
-                image_file.save(image_path)
-                # Chỉ lưu đường dẫn tương đối
-                image_path = f"img/products/{filename}"
+                try:
+                    # Use cloud storage service with fallback
+                    upload_result = upload_image(image_file, folder="products", public_id=f"products/{slug}")
+                    image_path = upload_result.get("url", "")
+                    logger.info(f"Image uploaded successfully: {image_path}")
+                except Exception as e:
+                    logger.error(f"Error uploading image: {str(e)}")
+                    flash(f"Lỗi khi tải lên hình ảnh: {str(e)}", "warning")
+                    # Fallback to local storage if cloud upload fails
+                    try:
+                        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                        filename = secure_filename(f"{slug}_{image_file.filename}")
+                        image_path = os.path.join(UPLOAD_FOLDER, filename)
+                        image_file.save(image_path)
+                        image_path = f"img/products/{filename}"
+                    except Exception as local_error:
+                        logger.error(f"Error saving image locally: {str(local_error)}")
+                        image_path = None
 
         if price <= 0:
             flash("Giá sản phẩm phải lớn hơn 0.", "warning")
@@ -321,6 +330,33 @@ def product_edit(pid):
         meta_desc = request.form.get("meta_description", desc)
         meta_kw = request.form.get("meta_keyword", "")
 
+        # Xử lý upload hình ảnh với cloud storage fallback
+        image_file = request.files.get('image')
+        image_path = product.get("HinhAnh")  # Keep existing image if no new upload
+        
+        if image_file and image_file.filename:
+            if not allowed_file(image_file.filename):
+                flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
+            else:
+                try:
+                    # Use cloud storage service with fallback
+                    upload_result = upload_image(image_file, folder="products", public_id=f"products/{slugify(name)}")
+                    image_path = upload_result.get("url", "")
+                    logger.info(f"Image uploaded successfully: {image_path}")
+                except Exception as e:
+                    logger.error(f"Error uploading image: {str(e)}")
+                    flash(f"Lỗi khi tải lên hình ảnh: {str(e)}", "warning")
+                    # Fallback to local storage if cloud upload fails
+                    try:
+                        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                        filename = secure_filename(f"{slugify(name)}_{image_file.filename}")
+                        image_path = os.path.join(UPLOAD_FOLDER, filename)
+                        image_file.save(image_path)
+                        image_path = f"img/products/{filename}"
+                    except Exception as local_error:
+                        logger.error(f"Error saving image locally: {str(local_error)}")
+                        image_path = product.get("HinhAnh")  # Keep old image on error
+
         old_price = float(product["GiaBan"])
         
         # Use a single transaction for both price history and product update
@@ -342,11 +378,11 @@ def product_edit(pid):
                     (pid, price)
                 )
             
-            # Update SanPham with new price and other fields
+            # Update SanPham with new price and other fields including image
             conn.execute(
                 """UPDATE SanPham SET TenSanPham=?, MoTa=?, GiaBan=?, GiaGoc=?, SoLuongTon=?,
-                   MetaTitle=?, MetaDescription=?, MetaKeyword=?, TrangThai=?, MaDanhMuc=? WHERE MaSanPham=?""",
-                (name, desc, price, orig, stock, meta_title, meta_desc, meta_kw, status, cat_id, pid),
+                   MetaTitle=?, MetaDescription=?, MetaKeyword=?, TrangThai=?, MaDanhMuc=?, HinhAnh=? WHERE MaSanPham=?""",
+                (name, desc, price, orig, stock, meta_title, meta_desc, meta_kw, status, cat_id, image_path, pid),
             )
             
             conn.commit()
