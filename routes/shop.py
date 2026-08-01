@@ -177,16 +177,30 @@ def product_detail(slug):
         flash("Sản phẩm không tồn tại hoặc đã bị gỡ khỏi hệ thống.", "warning")
         return redirect(url_for("shop.index"))
 
-    reviews = query_all(
-        """SELECT dg.*, nd.HoTen FROM DanhGia dg
-           JOIN NguoiDung nd ON dg.MaNguoiDung = nd.MaNguoiDung
-           WHERE dg.MaSanPham = ? AND dg.TrangThai = 'hien_thi' ORDER BY dg.NgayTao DESC""",
-        (product["MaSanPham"],),
-    )
-    avg_rating = query_one(
-        "SELECT AVG(SoSao) as avg, COUNT(*) as cnt FROM DanhGia WHERE MaSanPham = ? AND TrangThai = 'hien_thi'",
-        (product["MaSanPham"],),
-    )
+    # Try querying with TrangThai filter first, fallback if column is absent
+    try:
+        reviews = query_all(
+            """SELECT dg.*, nd.HoTen FROM DanhGia dg
+               JOIN NguoiDung nd ON dg.MaNguoiDung = nd.MaNguoiDung
+               WHERE dg.MaSanPham = ? AND dg.TrangThai = 'hien_thi' ORDER BY dg.NgayTao DESC""",
+            (product["MaSanPham"],),
+        )
+        avg_rating = query_one(
+            "SELECT AVG(SoSao) as avg, COUNT(*) as cnt FROM DanhGia WHERE MaSanPham = ? AND TrangThai = 'hien_thi'",
+            (product["MaSanPham"],),
+        )
+    except Exception:
+        # Fallback query if TrangThai column is missing
+        reviews = query_all(
+            """SELECT dg.*, nd.HoTen FROM DanhGia dg
+               JOIN NguoiDung nd ON dg.MaNguoiDung = nd.MaNguoiDung
+               WHERE dg.MaSanPham = ? ORDER BY dg.NgayTao DESC""",
+            (product["MaSanPham"],),
+        )
+        avg_rating = query_one(
+            "SELECT AVG(SoSao) as avg, COUNT(*) as cnt FROM DanhGia WHERE MaSanPham = ?",
+            (product["MaSanPham"],),
+        )
     price, discount = get_effective_price(product)
     related = query_all(
         """SELECT sp.* FROM SanPham sp

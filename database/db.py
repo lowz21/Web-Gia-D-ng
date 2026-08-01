@@ -335,25 +335,29 @@ def _migrate_user_profile_fields(conn):
 
 
 def _migrate_danh_gia(conn):
-    """Create DanhGia table if not exists."""
+    """Create DanhGia table if not exists and add TrangThai column if missing."""
     tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-    if "DanhGia" in tables:
-        return
-    
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS DanhGia (
-            MaDanhGia INTEGER PRIMARY KEY AUTOINCREMENT,
-            MaSanPham INTEGER NOT NULL,
-            MaNguoiDung INTEGER NOT NULL,
-            SoSao INTEGER NOT NULL CHECK(SoSao >= 1 AND SoSao <= 5),
-            NoiDung TEXT,
-            NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
-            TrangThai VARCHAR(20) DEFAULT 'hien_thi',
-            FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham),
-            FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
-        )
-    """)
-    conn.commit()
+    if "DanhGia" not in tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS DanhGia (
+                MaDanhGia INTEGER PRIMARY KEY AUTOINCREMENT,
+                MaSanPham INTEGER NOT NULL,
+                MaNguoiDung INTEGER NOT NULL,
+                SoSao INTEGER NOT NULL CHECK(SoSao >= 1 AND SoSao <= 5),
+                NoiDung TEXT,
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                TrangThai VARCHAR(20) DEFAULT 'hien_thi',
+                FOREIGN KEY (MaSanPham) REFERENCES SanPham(MaSanPham),
+                FOREIGN KEY (MaNguoiDung) REFERENCES NguoiDung(MaNguoiDung)
+            )
+        """)
+        conn.commit()
+    else:
+        # Check if TrangThai column exists in existing table
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(DanhGia)").fetchall()}
+        if "TrangThai" not in cols:
+            conn.execute("ALTER TABLE DanhGia ADD COLUMN TrangThai VARCHAR(20) DEFAULT 'hien_thi'")
+            conn.commit()
 
 
 def seed_data(conn):
