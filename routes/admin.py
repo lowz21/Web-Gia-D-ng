@@ -231,6 +231,11 @@ def product_add():
         image_file = request.files.get('image')
         image_path = None
         
+        logger.info(f"Request files: {list(request.files.keys())}")
+        if image_file:
+            logger.info(f"Image file received: {image_file.filename}, size: {len(image_file.read()) if image_file else 0}")
+            image_file.seek(0)
+        
         if image_file and image_file.filename:
             if not allowed_file(image_file.filename):
                 flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
@@ -250,9 +255,12 @@ def product_add():
                         image_path = os.path.join(UPLOAD_FOLDER, filename)
                         image_file.save(image_path)
                         image_path = f"img/products/{filename}"
+                        logger.info(f"Image saved locally: {image_path}")
                     except Exception as local_error:
                         logger.error(f"Error saving image locally: {str(local_error)}")
                         image_path = None
+        else:
+            logger.info("No new image file uploaded")
 
         if price <= 0:
             flash("Giá sản phẩm phải lớn hơn 0.", "warning")
@@ -337,9 +345,17 @@ def product_edit(pid):
         image_file = request.files.get('image')
         image_path = product.get("HinhAnh")  # Keep existing image if no new upload
         
+        logger.info(f"Request files: {list(request.files.keys())}")
+        logger.info(f"Existing image path: {image_path}")
+        
+        if image_file:
+            logger.info(f"Image file received: {image_file.filename}, size: {len(image_file.read()) if image_file else 0}")
+            image_file.seek(0)
+        
         if image_file and image_file.filename:
             if not allowed_file(image_file.filename):
                 flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
+                image_path = product.get("HinhAnh")  # Keep existing image on invalid file
             else:
                 try:
                     # Use cloud storage service with fallback
@@ -356,9 +372,12 @@ def product_edit(pid):
                         image_path = os.path.join(UPLOAD_FOLDER, filename)
                         image_file.save(image_path)
                         image_path = f"img/products/{filename}"
+                        logger.info(f"Image saved locally: {image_path}")
                     except Exception as local_error:
                         logger.error(f"Error saving image locally: {str(local_error)}")
                         image_path = product.get("HinhAnh")  # Keep old image on error
+        else:
+            logger.info("No new image file uploaded, keeping existing image")
 
         old_price = float(product["GiaBan"])
         
