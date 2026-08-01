@@ -4,6 +4,8 @@
 
 Hướng dẫn này sẽ giúp bạn đưa website sàn TMĐT Gia Dụng Pro lên Render.com - một nền tảng hosting miễn phí cho Python/Flask.
 
+**Lưu ý quan trọng:** Dự án hiện sử dụng **SQLite với auto-migration** thay vì PostgreSQL, giúp đơn giản hóa deployment và giảm chi phí.
+
 ## Bước 1: Chuẩn bị Repository
 
 ### 1.1. Đẩy code lên GitHub
@@ -49,41 +51,9 @@ git push -u origin main
 3. Click "Connect" để cấp quyền
 4. Chọn repository của bạn từ danh sách
 
-## Bước 3: Tạo PostgreSQL Database
+## Bước 3: Tạo Web Service
 
-### 3.1. Tạo Database
-
-1. Trong Dashboard Render, click "New" → "PostgreSQL"
-2. Điền thông tin:
-   - **Name**: `giadungpro-db` (hoặc tên bạn thích)
-   - **Database**: `giadungpro`
-   - **User**: `giadungpro_user`
-   - **Region**: Singapore (để giảm latency cho Việt Nam)
-3. Click "Create Database"
-4. Chờ khoảng 2-3 phút để Render tạo database
-
-### 3.2. Lấy Database URL
-
-1. Vào tab "Connect" của database vừa tạo
-2. Copy "Internal Database URL" có dạng:
-   ```
-   postgresql://giadungpro_user:password@dpg-xxxxx.oregon-postgres.render.com/giadungpro
-   ```
-3. Lưu lại URL này để dùng ở Bước 5
-
-### 3.3. Seed dữ liệu
-
-Vì PostgreSQL không tự động seed như SQLite, bạn cần chạy script seed:
-
-```sql
--- Copy nội dung file database/schema.sql
--- Paste vào SQL Editor của Render PostgreSQL
--- Hoặc dùng pgAdmin để kết nối và chạy schema.sql
-```
-
-## Bước 4: Tạo Web Service
-
-### 4.1. Cấu hình Web Service
+### 3.1. Cấu hình Web Service
 
 1. Click "New" → "Web Service"
 2. Chọn repository của bạn
@@ -99,7 +69,7 @@ Vì PostgreSQL không tự động seed như SQLite, bạn cần chạy script s
 - **Region**: Singapore
 - **Branch**: `main`
 
-### 4.2. Cấu hình Environment Variables
+### 3.2. Cấu hình Environment Variables
 
 Trong tab "Environment", thêm các biến sau:
 
@@ -107,33 +77,71 @@ Trong tab "Environment", thêm các biến sau:
 |-----|-------|-------------|
 | `SECRET_KEY` | `your_random_secret_key_here` | Tạo random string dài |
 | `FLASK_ENV` | `production` | Môi trường production |
-| `DATABASE_URL` | `postgresql://...` | URL từ Bước 3.2 |
 | `GEMINI_API_KEY` | `your_gemini_api_key` | API Key Gemini AI (tùy chọn) |
-| `SEPAY_API_KEY` | `your_sepay_api_key` | API Key SePay (tùy chọn) |
+| `CLOUDINARY_CLOUD_NAME` | `your_cloud_name` | Cloudinary cloud name (tùy chọn) |
+| `CLOUDINARY_API_KEY` | `your_api_key` | Cloudinary API key (tùy chọn) |
+| `CLOUDINARY_API_SECRET` | `your_api_secret` | Cloudinary API secret (tùy chọn) |
+| `SEPAY_MERCHANT_ID` | `SP-LIVE-THA8BB58` | SePay Merchant ID (tùy chọn) |
+| `SEPAY_SECRET_KEY` | `spsk_live_bxCWHJK8CMa17axvMbPWk3fmJKv66EXq` | SePay Secret Key (tùy chọn) |
 | `SEPAY_WEBHOOK_SECRET` | `your_webhook_secret` | Secret cho SePay (tùy chọn) |
 | `PAYMENT_WEBHOOK_SECRET` | `your_webhook_secret` | Secret cho webhook (tùy chọn) |
 
 **Lưu ý:**
-- `DATABASE_URL` là quan trọng nhất - copy từ Bước 3.2
+- **Không cần DATABASE_URL** - SQLite sẽ tự động tạo và seed
+- SQLite database được lưu trong filesystem (ephemeral trên Render)
 - Các key SePay/PayOS có thể thêm sau khi tích hợp
+- Cloudinary credentials tùy chọn - nếu không có sẽ dùng Base64 Data URIs
 
-### 4.3. Click "Create Web Service"
+### 3.3. Click "Create Web Service"
 
 Render sẽ bắt đầu build và deploy. Quá trình mất khoảng 5-10 phút.
 
-## Bước 5: Kiểm tra Deployment
+## Bước 4: Kiểm tra Deployment
 
-### 5.1. Xem Logs
+### 4.1. Xem Logs
 
 1. Vào tab "Logs" của Web Service
 2. Kiểm tra xem có lỗi không
-3. Nếu thấy "Server running on port 5000" → Thành công
+3. Nếu thấy "Server running on port 5000" và "Database initialized" → Thành công
 
-### 5.2. Truy cập Website
+### 4.2. Truy cập Website
 
 1. Render sẽ cung cấp URL dạng: `https://giadungpro-web.onrender.com`
 2. Click vào URL để truy cập website
 3. Test các chức năng cơ bản
+
+**Lưu ý về SQLite trên Render:**
+- SQLite database sẽ được tạo lại mỗi khi Render redeploy
+- Dữ liệu sẽ mất sau mỗi redeploy (filesystem ephemeral)
+- Để lưu trữ persistent data, nên sử dụng PostgreSQL (xem Bước 5)
+
+## Bước 5: Tích hợp PostgreSQL (Tùy chọn - Khuyên dùng cho Production)
+
+Nếu muốn data persistent, hãy tích hợp PostgreSQL:
+
+### 5.1. Tạo PostgreSQL Database
+
+1. Trong Dashboard Render, click "New" → "PostgreSQL"
+2. Điền thông tin:
+   - **Name**: `giadungpro-db` (hoặc tên bạn thích)
+   - **Database**: `giadungpro`
+   - **User**: `giadungpro_user`
+   - **Region**: Singapore
+3. Click "Create Database"
+4. Chờ khoảng 2-3 phút để Render tạo database
+
+### 5.2. Lấy Database URL
+
+1. Vào tab "Connect" của database vừa tạo
+2. Copy "Internal Database URL"
+3. Thêm vào Environment Variables: `DATABASE_URL=postgresql://...`
+
+### 5.3. Seed dữ liệu
+
+Vì PostgreSQL không tự động seed như SQLite, bạn cần:
+1. Kết nối bằng pgAdmin hoặc DBeaver
+2. Chạy nội dung file `database/schema.sql`
+3. Hoặc dùng migration script tự động
 
 ## Bước 6: Tích hợp SePay (Tùy chọn)
 
@@ -157,7 +165,8 @@ Render sẽ bắt đầu build và deploy. Quá trình mất khoảng 5-10 phút
    ```
 2. Copy API Key và Webhook Secret
 3. Thêm vào Environment Variables của Render:
-   - `SEPAY_API_KEY`: `your_api_key`
+   - `SEPAY_MERCHANT_ID`: `SP-LIVE-THA8BB58`
+   - `SEPAY_SECRET_KEY`: `spsk_live_bxCWHJK8CMa17axvMbPWk3fmJKv66EXq`
    - `SEPAY_WEBHOOK_SECRET`: `your_webhook_secret`
 
 ### 6.4. Test Webhook
@@ -206,20 +215,19 @@ Render sẽ tự động deploy khi bạn push code mới vào GitHub:
 
 ### 8.3. Backup Database
 
-Render PostgreSQL tự động backup hàng ngày. Bạn có thể:
-- Export thủ công từ Dashboard
-- Kết nối bằng pgAdmin để backup
+**Nếu dùng SQLite:** Data sẽ mất sau mỗi redeploy
+**Nếu dùng PostgreSQL:** Render tự động backup hàng ngày
 
 ## Troubleshooting
 
-### Lỗi: Database connection failed
+### Lỗi: Database initialization failed
 
-**Nguyên nhân:** DATABASE_URL sai hoặc database chưa sẵn sàng
+**Nguyên nhân:** SQLite không thể tạo file trong ephemeral filesystem
 
 **Giải pháp:**
-1. Kiểm tra DATABASE_URL trong Environment Variables
-2. Đảm bảo database đã chạy (Status = Available)
-3. Test kết nối bằng pgAdmin
+1. Kiểm tra Logs để biết lỗi cụ thể
+2. Đảm bảo database folder có write permissions
+3. Khuyên dùng PostgreSQL cho production
 
 ### Lỗi: Build failed
 
@@ -272,9 +280,9 @@ Nếu website có nhiều traffic:
 
 Sau khi hoàn thành các bước trên:
 - ✅ Website chạy 24/7 trên Render.com
-- ✅ Database PostgreSQL online
+- ✅ Database SQLite auto-migration (hoặc PostgreSQL nếu tích hợp)
 - ✅ Tự động deploy khi push code
-- ✅ Tích hợp SePay cho thanh toán thật
+- ✅ Tích hợp SePay cho thanh toán thật (tùy chọn)
 - ✅ Domain tùy chỉnh (nếu muốn)
 
 ## Hỗ trợ

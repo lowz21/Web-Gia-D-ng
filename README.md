@@ -5,10 +5,12 @@ Website thương mại điện tử đa cửa hàng chuyên đồ gia dụng, x�
 ## Công nghệ
 
 - **Backend:** Python Flask
-- **Database:** SQLite
+- **Database:** SQLite (với auto-migration)
 - **Frontend:** HTML, CSS, JavaScript (Bootstrap-style custom CSS)
+- **Maps:** Leaflet.js với OpenStreetMap
 - **AI Chatbot:** Google Gemini API (gemini-1.5-flash)
 - **SEO:** JSON-LD Schema, Sitemap.xml, Robots.txt, Open Graph
+- **Image Storage:** Base64 Data URIs (persistent) với Cloudinary/Supabase fallback
 
 ## Cài đặt & Chạy Local
 
@@ -18,15 +20,27 @@ cd "c:\WEB - Copy"
 pip install -r requirements.txt
 ```
 
-### Bước 2: Cấu hình Gemini API Key (Tùy chọn)
-1. Lấy API Key miễn phí tại: https://makersuite.google.com/app/apikey
-2. Mở file `.env` trong thư mục dự án
-3. Thay thế `your_gemini_api_key_here` bằng API Key của bạn:
-```
-GEMINI_API_KEY=your_actual_api_key_here
-```
+### Bước 2: Cấu hình Environment Variables (Tùy chọn)
+Mở file `.env` trong thư mục dự án:
 
-**Lưu ý:** Nếu không có API Key, chatbot sẽ tự động fallback về chế độ rule-based.
+```env
+# Gemini AI Chatbot (tùy chọn - fallback rule-based nếu không có)
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Cloud Storage (tùy chọn - fallback Base64 nếu không có)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+SUPABASE_BUCKET=uploads
+
+# Payment Webhooks (tùy chọn)
+SEPAY_MERCHANT_ID=SP-LIVE-THA8BB58
+SEPAY_SECRET_KEY=spsk_live_bxCWHJK8CMa17axvMbPWk3fmJKv66EXq
+SEPAY_WEBHOOK_SECRET=your_webhook_secret_here
+PAYMENT_WEBHOOK_SECRET=your_webhook_secret_here
+```
 
 ### Bước 3: Chạy web
 ```powershell
@@ -53,6 +67,7 @@ Mở trình duyệt: **http://localhost:5000`
 - Quản lý sản phẩm đồ gia dụng (CRUD)
 - Quản lý giá bán + lịch sử thay đổi giá
 - Quản lý khuyến mãi
+- Upload hình ảnh sản phẩm (Base64 Data URIs)
 
 ### Tuần 5 - User
 - Trang bán hàng hiển thị sản phẩm
@@ -65,10 +80,35 @@ Mở trình duyệt: **http://localhost:5000`
 - Quản lý đơn hàng (Chờ xác nhận → Đã xác nhận → Đang xử lý → Đang giao → Đã giao / Đã hủy)
 - Lịch sử đơn hàng + hủy đơn
 - Đánh giá sản phẩm
+- **Bản đồ GPS & Tính phí vận chuyển dựa trên khoảng cách**
 
 ### Tuần 8
 - Thống kê doanh thu, top sản phẩm
 - **Chatbot AI tư vấn khách hàng** (Google Gemini)
+
+## Tính năng mới
+
+### GPS & Bản đồ
+- **Leaflet.js Map**: Tích hợp bản đồ tương tác với OpenStreetMap
+- **Geolocation**: Auto-location GPS cho địa chỉ giao hàng
+- **Reverse Geocoding**: Auto-fill địa chỉ từ tọa độ GPS
+- **Tính phí vận chuyển động**: Dựa trên khoảng cách GPS (Haversine formula)
+- **Phí vận chuyển tiered**:
+  - ≤5km: 15,000đ
+  - ≤15km: 30,000đ
+  - ≤50km: 50,000đ
+  - >50km: 80,000đ
+
+### Image Storage
+- **Base64 Data URIs**: Lưu ảnh trực tiếp trong database (persistent)
+- **Cloud Storage Fallback**: Cloudinary/Supabase nếu credentials configured
+- **No Filesystem Dependency**: Không bị mất ảnh khi redeploy
+- **Auto Fallback**: Placeholder neutral khi load fail
+
+### Database Auto-Migration
+- **Auto-add columns**: TrangThai, NgayTao cho bảng DanhGia
+- **Safe queries**: Fallback queries khi columns thiếu
+- **No manual migration**: Tự động chạy khi init_db()
 
 ## Tính năng SEO
 
@@ -94,19 +134,34 @@ Dự án đã được cài đặt sẵn 18 sản phẩm đồ gia dụng đa d�
 
 ## Cấu trúc CSDL
 
-Xem `database/schema.sql` — gồm các bảng: NguoiDung, CuaHang, DanhMuc, SanPham, LichSuGia, KhuyenMai, GioHang, ChiTietGioHang, DonHang, ChiTietDonHang, ThanhToan, DonViGiaoNhan, VanChuyen, DanhGia, ThongBao, LichSuDonHang.
+Xem `database/schema.sql` — gồm các bảng: NguoiDung, CuaHang, DanhMuc, SanPham, LichSuGia, KhuyenMai, GioHang, ChiTietGioHang, DonHang, ChiTietDonHang, ThanhToan, DonViGiaoNhan, VanChuyen, DanhGia, ThongBao, LichSuDonHang, DiaChiKhachHang.
+
+**Bảng DiaChiKhachHang**:
+- MaDiaChiKhachHang (PK)
+- MaKhachHang (FK)
+- TenNguoiNhan
+- SoDienThoai
+- TinhThanh
+- QuanHuyen
+- PhuongXa
+- DiaChiCuThe
+- Lat (Latitude - GPS)
+- Lng (Longitude - GPS)
+- LaMacDinh
 
 ## Lưu ý cho Demo Giảng Viên
 
 1. **Database**: SQLite sẽ tự động tạo và seed dữ liệu khi chạy lần đầu
 2. **Tài khoản**: Sử dụng tài khoản demo ở trên để test các chức năng
 3. **Bán hàng**: Chức năng đặt hàng, giỏ hàng hoạt động đầy đủ
-4. **SEO**: Kiểm tra `/sitemap.xml` và `/robots.txt` sau khi chạy
-5. **Chatbot AI**: 
+4. **GPS Map**: Test tính năng GPS auto-location và tính phí vận chuyển động
+5. **SEO**: Kiểm tra `/sitemap.xml` và `/robots.txt` sau khi chạy
+6. **Chatbot AI**:
    - Có API Key: Chatbot AI thực sự với Google Gemini
    - Không API Key: Tự động fallback về rule-based
    - AI sẽ tự động tư vấn dựa trên dữ liệu sản phẩm trong CSDL
-6. **JSON-LD**: Kiểm tra source trang sản phẩm để xem Schema.org/Product
+7. **JSON-LD**: Kiểm tra source trang sản phẩm để xem Schema.org/Product
+8. **Image Storage**: Images được lưu dưới Base64 Data URIs trong DB (persistent)
 
 ## Test Thanh Toán QR (Development)
 
