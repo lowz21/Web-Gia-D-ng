@@ -46,20 +46,20 @@
         <div class="main-image-container">
           {% if product_images %}
             {% set main_image = product_images[0] %}
-            <img id="main-image" src="{{ main_image.URL }}" alt="{{ product.TenSanPham }}" class="main-image" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
+            <img id="main-image" src="{{ main_image.URL }}" alt="{{ product.TenSanPham }}" class="main-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300?text=No+Image';">
           {% elif product.HinhAnh %}
-            <img id="main-image" src="{{ url_for('static', filename=product.HinhAnh) }}" alt="{{ product.TenSanPham }}" class="main-image" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
+            <img id="main-image" src="{{ product.HinhAnh }}" alt="{{ product.TenSanPham }}" class="main-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300?text=No+Image';">
           {% else %}
             <div class="main-image-placeholder">🍳</div>
           {% endif %}
         </div>
-        
+
         <!-- Thumbnail Gallery -->
         {% if product_images and product_images|length > 1 %}
         <div class="thumbnail-gallery">
           {% for img in product_images %}
           <div class="thumbnail {% if loop.first %}active{% endif %}" data-index="{{ loop.index - 1 }}">
-            <img src="{{ img.URL }}" alt="{{ product.TenSanPham }}" class="thumbnail-image" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
+            <img src="{{ img.URL }}" alt="{{ product.TenSanPham }}" class="thumbnail-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300?text=No+Image';">
           </div>
           {% endfor %}
         </div>

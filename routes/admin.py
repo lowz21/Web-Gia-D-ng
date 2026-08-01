@@ -2,6 +2,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 import os
+import base64
 from database.db import query_one, query_all, execute, get_db, create_price_record, get_price_history
 from helpers import login_required, slugify, ORDER_STATUS, format_currency, get_effective_price, ROLE_LABELS
 from services.cloud_storage import upload_image, delete_image
@@ -227,7 +228,7 @@ def product_add():
         meta_kw = request.form.get("meta_keyword", "")
         slug = slugify(name)
         
-        # Xử lý upload hình ảnh với cloud storage fallback
+        # Xử lý upload hình ảnh với Base64 Data URI (persistent storage)
         image_file = request.files.get('image')
         image_path = None
         
@@ -241,24 +242,16 @@ def product_add():
                 flash("Chỉ chấp nhận file hình ảnh (png, jpg, jpeg, gif, webp).", "danger")
             else:
                 try:
-                    # Use cloud storage service with fallback
-                    upload_result = upload_image(image_file, folder="products", public_id=f"products/{slug}")
-                    image_path = upload_result.get("url", "")
-                    logger.info(f"Image uploaded successfully: {image_path}")
+                    # Convert image to Base64 Data URI for persistent storage
+                    file_bytes = image_file.read()
+                    encoded_string = base64.b64encode(file_bytes).decode('utf-8')
+                    mime_type = image_file.content_type or 'image/jpeg'
+                    image_path = f"data:{mime_type};base64,{encoded_string}"
+                    logger.info(f"Image converted to Base64 Data URI, length: {len(encoded_string)}")
                 except Exception as e:
-                    logger.error(f"Error uploading image: {str(e)}")
-                    flash(f"Lỗi khi tải lên hình ảnh: {str(e)}", "warning")
-                    # Fallback to local storage if cloud upload fails
-                    try:
-                        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                        filename = secure_filename(f"{slug}_{image_file.filename}")
-                        image_path = os.path.join(UPLOAD_FOLDER, filename)
-                        image_file.save(image_path)
-                        image_path = f"img/products/{filename}"
-                        logger.info(f"Image saved locally: {image_path}")
-                    except Exception as local_error:
-                        logger.error(f"Error saving image locally: {str(local_error)}")
-                        image_path = None
+                    logger.error(f"Error converting image to Base64: {str(e)}")
+                    flash(f"Lỗi khi xử lý hình ảnh: {str(e)}", "danger")
+                    image_path = None
         else:
             logger.info("No new image file uploaded")
 
@@ -341,7 +334,7 @@ def product_edit(pid):
         meta_desc = request.form.get("meta_description", desc)
         meta_kw = request.form.get("meta_keyword", "")
 
-        # Xử lý upload hình ảnh với cloud storage fallback
+        # Xử lý upload hình ảnh với Base64 Data URI (persistent storage)
         image_file = request.files.get('image')
         image_path = product.get("HinhAnh")  # Keep existing image if no new upload
         
@@ -358,24 +351,16 @@ def product_edit(pid):
                 image_path = product.get("HinhAnh")  # Keep existing image on invalid file
             else:
                 try:
-                    # Use cloud storage service with fallback
-                    upload_result = upload_image(image_file, folder="products", public_id=f"products/{slugify(name)}")
-                    image_path = upload_result.get("url", "")
-                    logger.info(f"Image uploaded successfully: {image_path}")
+                    # Convert image to Base64 Data URI for persistent storage
+                    file_bytes = image_file.read()
+                    encoded_string = base64.b64encode(file_bytes).decode('utf-8')
+                    mime_type = image_file.content_type or 'image/jpeg'
+                    image_path = f"data:{mime_type};base64,{encoded_string}"
+                    logger.info(f"Image converted to Base64 Data URI, length: {len(encoded_string)}")
                 except Exception as e:
-                    logger.error(f"Error uploading image: {str(e)}")
-                    flash(f"Lỗi khi tải lên hình ảnh: {str(e)}", "warning")
-                    # Fallback to local storage if cloud upload fails
-                    try:
-                        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                        filename = secure_filename(f"{slugify(name)}_{image_file.filename}")
-                        image_path = os.path.join(UPLOAD_FOLDER, filename)
-                        image_file.save(image_path)
-                        image_path = f"img/products/{filename}"
-                        logger.info(f"Image saved locally: {image_path}")
-                    except Exception as local_error:
-                        logger.error(f"Error saving image locally: {str(local_error)}")
-                        image_path = product.get("HinhAnh")  # Keep old image on error
+                    logger.error(f"Error converting image to Base64: {str(e)}")
+                    flash(f"Lỗi khi xử lý hình ảnh: {str(e)}", "danger")
+                    image_path = product.get("HinhAnh")  # Keep old image on error
         else:
             logger.info("No new image file uploaded, keeping existing image")
 

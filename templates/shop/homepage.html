@@ -205,9 +205,9 @@
         {% set price, discount = get_effective_price(product) %}
         <div class="card">
             {% if product.PrimaryImageURL %}
-            <img src="{{ product.PrimaryImageURL }}" class="card-img" alt="{{ product.TenSanPham }}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
+            <img src="{{ product.PrimaryImageURL }}" class="card-img" alt="{{ product.TenSanPham }}" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300?text=No+Image';">
             {% elif product.HinhAnh %}
-            <img src="{{ url_for('static', filename=product.HinhAnh) }}" class="card-img" alt="{{ product.TenSanPham }}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop';">
+            <img src="{{ product.HinhAnh }}" class="card-img" alt="{{ product.TenSanPham }}" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x300?text=No+Image';">
             {% else %}
             <div class="card-img">
                 <span class="display-6">📦</span>
