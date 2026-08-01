@@ -305,10 +305,13 @@ def product_add():
 @admin_bp.route("/san-pham/<int:pid>/sua", methods=["GET", "POST"])
 @login_required(roles=["admin", "chu_cua_hang"])
 def product_edit(pid):
-    product = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (pid,))
-    if not product:
+    product_raw = query_one("SELECT * FROM SanPham WHERE MaSanPham = ?", (pid,))
+    if not product_raw:
         flash("Sản phẩm không tồn tại.", "danger")
         return redirect(url_for("admin.products"))
+
+    # Convert sqlite3.Row to standard dict for safe .get() access
+    product = dict(product_raw)
 
     shop_id = get_shop_id()
     if session.get("user", {}).get("VaiTro") == "chu_cua_hang" and product["MaCuaHang"] != shop_id:
