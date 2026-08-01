@@ -335,7 +335,7 @@ def _migrate_user_profile_fields(conn):
 
 
 def _migrate_danh_gia(conn):
-    """Create DanhGia table if not exists and add TrangThai column if missing."""
+    """Create DanhGia table if not exists and add missing columns."""
     tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
     if "DanhGia" not in tables:
         conn.execute("""
@@ -353,11 +353,13 @@ def _migrate_danh_gia(conn):
         """)
         conn.commit()
     else:
-        # Check if TrangThai column exists in existing table
+        # Check and add missing columns in existing table
         cols = {row[1] for row in conn.execute("PRAGMA table_info(DanhGia)").fetchall()}
         if "TrangThai" not in cols:
             conn.execute("ALTER TABLE DanhGia ADD COLUMN TrangThai VARCHAR(20) DEFAULT 'hien_thi'")
-            conn.commit()
+        if "NgayTao" not in cols:
+            conn.execute("ALTER TABLE DanhGia ADD COLUMN NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP")
+        conn.commit()
 
 
 def seed_data(conn):
